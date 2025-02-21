@@ -7,6 +7,7 @@ import java.util.ArrayList;
 @Entity
 @Table(name = "Groups")
 public class Group extends BaseModel {
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public int id;
     private String groupName;
@@ -14,9 +15,12 @@ public class Group extends BaseModel {
     private ArrayList<User> members;
 
     // Constructor
-    public Group(String groupName, String description) {
+    public Group(String groupName, String description){
         this.groupName = groupName;
         this.description = description;
+    }
+    public Group() {
+
     }
 
     // Getters and setters

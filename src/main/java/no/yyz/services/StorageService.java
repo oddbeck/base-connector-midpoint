@@ -6,13 +6,9 @@ import no.yyz.models.BaseModel;
 
 import java.util.List;
 
-public class StorageService<T extends BaseModel> extends AbstractService {
+public class StorageService<T extends BaseModel> extends AbstractService  implements AutoCloseable{
 
     Class<T> type;
-
-    protected StorageService() {
-        super();
-    }
 
     protected StorageService(Class<T> type) {
         super();
@@ -80,5 +76,10 @@ public class StorageService<T extends BaseModel> extends AbstractService {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        sessionFactory.close();
     }
 }

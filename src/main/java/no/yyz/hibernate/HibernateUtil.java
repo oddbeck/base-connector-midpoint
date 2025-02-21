@@ -7,34 +7,40 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.service.ServiceRegistry;
 
 public class HibernateUtil {
-    private static final SessionFactory sessionFactory;
 
-    static {
-        try {
-            Configuration configuration = new Configuration()
-                    .addAnnotatedClass(User.class)
-                    .setProperty("hibernate.connection.driver_class", "org.sqlite.JDBC")
-                    .setProperty("hibernate.connection.url", "jdbc:sqlite:test.sqlite")
-                    .setProperty("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect")
-                    .setProperty("hibernate.show_sql", "true")
-                    .setProperty("hibernate.hbm2ddl.auto", "update");  // Corrected typo here
-            ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
-                    .applySettings(configuration.getProperties()).build();
-            sessionFactory = configuration.buildSessionFactory(serviceRegistry);
+    public static SessionFactory createSessionFactory(String jdbcUrl, String driverClassName, String hibernateDialect, String username, String password) {
+        Configuration configuration = new Configuration()
+                .addAnnotatedClass(User.class)
+                .addAnnotatedClass(Group.class)
+                .addAnnotatedClass(UserGroups.class)
+                .setProperty("hibernate.connection.driver_class", driverClassName)
+                //.setProperty("hibernate.connection.driver_class", "org.sqlite.JDBC")
+                .setProperty("hibernate.connection.url", jdbcUrl)
+                //.setProperty("hibernate.connection.url", "jdbc:sqlite:test.sqlite")
+                .setProperty("hibernate.dialect", hibernateDialect)
+                // .setProperty("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect")
+                //.setProperty("hibernate.show_sql", "true")
+                // set hibernate username
+                .setProperty("hibernate.connection.username", username)
+                .setProperty("hibernate.connection.password", password)
+                .setProperty("hibernate.hbm2ddl.auto", "update");  // Corrected typo here
+        ServiceRegistry serviceRegistry = new StandardServiceRegistryBuilder()
+                .applySettings(configuration.getProperties()).build();
+        return configuration.buildSessionFactory(serviceRegistry);
 
-        } catch (Exception e) {
-            System.err.println("SessionFactory creation failed: " + e);
-            throw new ExceptionInInitializerError(e);
-        }
     }
 
-    public static SessionFactory getSessionFactory() {
-        return sessionFactory;
-    }
-
-    public static void shutdown() {
-        if (sessionFactory != null) {
-            sessionFactory.close();
-        }
-    }
+//    public static SessionFactory getSessionFactory() {
+//        return sessionFactory;
+//    }
+//
+//    public static SessionFactory getSessionFactory(String name) {
+//        return sessionFactory;
+//    }
+//
+//    public static void shutdown() {
+//        if (sessionFactory != null) {
+//            sessionFactory.close();
+//        }
+//    }
 }
