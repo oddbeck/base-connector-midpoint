@@ -1,19 +1,15 @@
 import no.yyz.YyzConnector;
 import no.yyz.models.User;
-import no.yyz.services.IUserStorageImpl;
+import no.yyz.services.UserService;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.junit.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
 
 public class ConnectorTest {
     @Test
@@ -25,10 +21,10 @@ public class ConnectorTest {
 
     @Test
     public void Fail() throws SQLException {
-        IUserStorageImpl storage = new IUserStorageImpl("test.db");
-        User user = storage.insertUser(new User("odd", "oddbeck@gmail.com"));
-        User newUser = storage.fetchUserById(user.getId());
-        assertEquals(user.getId(), newUser.getId());
+        UserService storage = new UserService();
+        User user = storage.persist(new User("odd", "oddbeck@gmail.com"));
+        User newUser = storage.getById(user.getId());
+        Assert.assertEquals(user.getId(), newUser.getId());
     }
 
     @Test

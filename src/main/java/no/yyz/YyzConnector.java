@@ -1,8 +1,7 @@
 package no.yyz;
 
-import no.yyz.interfaces.IUserStorage;
 import no.yyz.models.User;
-import no.yyz.services.IUserStorageImpl;
+import no.yyz.services.UserService;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
@@ -10,12 +9,13 @@ import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
-import org.identityconnectors.framework.spi.*;
+import org.identityconnectors.framework.spi.Configuration;
+import org.identityconnectors.framework.spi.ConnectorClass;
+import org.identityconnectors.framework.spi.PoolableConnector;
 import org.identityconnectors.framework.spi.operations.CreateOp;
 import org.identityconnectors.framework.spi.operations.SchemaOp;
 import org.identityconnectors.framework.spi.operations.SearchOp;
 
-import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +34,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
     private static int LoopCounter = 0;
     private static final Log LOG = Log.getLog(YyzConnector.class);
     private YyzConfiguration configuration;
-    private final IUserStorage userStorage = new IUserStorageImpl("userStorage");
+    private final UserService userservice = new UserService();
 
     @Override
     public void test() {
@@ -94,7 +94,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
             List<Object> value = attribute.getValue();
             Object firstValue = null;
             if (!value.isEmpty()) {
-                firstValue = value.get(0);
+                firstValue = value.getFirst();
             }
             switch (name.toLowerCase()) {
                 case "email": {
@@ -132,8 +132,8 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
             }
         }
         try {
-            user = this.userStorage.insertUser(user);
-        } catch (SQLException e) {
+            user = this.userservice.persist(user);
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         int userId = user.getId();
@@ -157,7 +157,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
                 var attributeName = equalsFilter.getAttribute();
                 if (attributeName.getName().equals(Uid.NAME)) {
                     for (var value : attributeName.getValue()) {
-                        var user = this.userStorage.fetchUserById(Integer.parseInt(value.toString()));
+                        var user = this.userservice.getById(Integer.parseInt(value.toString()));
                         if (user != null) {
                             Set<Attribute> attributes = new HashSet<>();
                             attributes.add(AttributeBuilder.build("username", user.getUsername()));
@@ -171,7 +171,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
                     return;
                 }
             }
-            List<User> list = this.userStorage.fetchAllUsers();
+            List<User> list = this.userservice.getAll();
             for (User user : list) {
                 Set<Attribute> attributes = new HashSet<>();
                 attributes.add(AttributeBuilder.build("username", user.getUsername()));
@@ -181,7 +181,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
                 ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
                 resultsHandler.handle(obj);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

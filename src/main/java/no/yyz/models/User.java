@@ -1,9 +1,14 @@
 package no.yyz.models;
 
+import jakarta.persistence.*;
 import org.identityconnectors.framework.common.objects.*;
 
-public class User {
-    private int id;
+@Entity
+@Table(name = "Users")
+public class User extends BaseModel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public int id;
     private String username;
     private String email;
     private String givenName;

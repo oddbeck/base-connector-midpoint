@@ -1,9 +1,14 @@
 package no.yyz.models;
 
+import jakarta.persistence.*;
+
 import java.util.ArrayList;
 
-public class Group {
-    private int id;
+@Entity
+@Table(name = "Groups")
+public class Group extends BaseModel {
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public int id;
     private String groupName;
     private String description;
     private ArrayList<User> members;

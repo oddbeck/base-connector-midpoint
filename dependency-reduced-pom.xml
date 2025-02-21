@@ -45,24 +45,20 @@
   </build>
   <repositories>
     <repository>
+      <releases />
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+    </repository>
+    <repository>
       <id>evolveum</id>
       <name>Evolveum Public Releases</name>
       <url>https://nexus.evolveum.com/nexus/content/groups/public</url>
     </repository>
   </repositories>
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>hamcrest-core</artifactId>
-          <groupId>org.hamcrest</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
     <dependency>
       <groupId>net.tirasa.connid</groupId>
       <artifactId>connector-test-common</artifactId>
@@ -117,30 +113,11 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <dependency>
-      <groupId>org.testng</groupId>
-      <artifactId>testng</artifactId>
-      <version>6.8</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <artifactId>bsh</artifactId>
-          <groupId>org.beanshell</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>jcommander</artifactId>
-          <groupId>com.beust</groupId>
-        </exclusion>
-        <exclusion>
-          <artifactId>snakeyaml</artifactId>
-          <groupId>org.yaml</groupId>
-        </exclusion>
-      </exclusions>
-    </dependency>
   </dependencies>
   <properties>
-    <maven.compiler.target>17</maven.compiler.target>
-    <project.source.version>17</project.source.version>
-    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <yyz.hibernate.version>6.6.7.Final</yyz.hibernate.version>
+    <project.source.version>21</project.source.version>
   </properties>
 </project>
