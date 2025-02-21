@@ -13,6 +13,15 @@ import org.testng.annotations.Test;
 
 public class HibernateUtilTest {
     @Test
+    public void FindOneGroupByName() {
+        try (GroupService service = new GroupService()) {
+            var group = service.findGroupByName("amdmins");
+            Assert.assertNotNull(group);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    @Test
     public void TestCompoundClass() {
 
         try (UserGroupsService service = new UserGroupsService();
