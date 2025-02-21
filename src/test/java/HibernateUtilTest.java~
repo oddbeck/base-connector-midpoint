@@ -41,7 +41,7 @@ public class HibernateUtilTest {
     @Test
     public void UtilTest() {
         var userid = 0;
-        var sessionFactory = HibernateUtil.createSessionFactory("jdbc:sqlite:test.sqlite", "org.sqlite.JDBC", "org.hibernate.community.dialect.SQLiteDialect", "username", "password");
+        var sessionFactory = HibernateUtil.createSessionFactory("jdbc:sqlite:test.sqlite", "org.sqlite.JDBC", "org.hibernate.dialect.SQLiteDialect", "username", "password");
         UserService userService = new UserService();
         var us = new User("odd", "email");
         var us2 = userService.persist(us);
