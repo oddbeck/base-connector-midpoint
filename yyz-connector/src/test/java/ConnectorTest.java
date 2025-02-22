@@ -1,10 +1,12 @@
+import no.yyz.YyzConnector;
+import org.testng.annotations.Test;
+
 public class ConnectorTest {
-//    @Test
-//    public void Test() {
-//        YyzConnector connector = new YyzConnector();
-//
-//        connector.test();
-//    }
+    @Test
+    public void Test() {
+        YyzConnector connector = new YyzConnector();
+        connector.test();
+    }
 //
 //    @Test
 //    public void Fail() throws SQLException {

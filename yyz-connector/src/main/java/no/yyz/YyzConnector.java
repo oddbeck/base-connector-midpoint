@@ -1,5 +1,6 @@
 package no.yyz;
 
+import no.yyz.hibernateutil.services.UserService;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
@@ -22,7 +23,7 @@ import java.util.Set;
         displayNameKey = "UI_CONNECTOR_NAME",
         configurationClass = YyzConfiguration.class
 )
-public class YyzConnector implements org.identityconnectors.framework.api.operations.TestApiOp,
+public class YyzConnector implements AutoCloseable, org.identityconnectors.framework.api.operations.TestApiOp,
         PoolableConnector,
         CreateOp,
         SearchOp<Filter>,
@@ -31,7 +32,7 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
     private static int LoopCounter = 0;
     private static final Log LOG = Log.getLog(YyzConnector.class);
     private YyzConfiguration configuration;
-//    private final UserService userservice = new UserService();
+    private final UserService userservice = new UserService();
 
     @Override
     public void test() {
@@ -120,5 +121,10 @@ public class YyzConnector implements org.identityconnectors.framework.api.operat
 
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions operationOptions) {
+    }
+
+    @Override
+    public void close() throws Exception {
+        this.userservice.close();
     }
 }

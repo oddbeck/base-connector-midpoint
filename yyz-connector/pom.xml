@@ -29,19 +29,25 @@
             <artifactId>testng</artifactId>
             <version>7.10.2</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.hibernate.orm</groupId>-->
-<!--            <artifactId>hibernate-core</artifactId>-->
-<!--            <version>${yyz.hibernate.version}</version>-->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${yyz.hibernate.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-community-dialects</artifactId>
+            <version>${yyz.hibernate.version}</version>
 <!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.hibernate.orm</groupId>-->
-<!--            <artifactId>hibernate-community-dialects</artifactId>-->
-<!--            <version>${yyz.hibernate.version}</version>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
+        </dependency>
+        <dependency>
+            <groupId>no.yyz</groupId>
+            <artifactId>HibernateUtil</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <!--        <dependency>-->
 <!--            <groupId>org.hibernate.orm</groupId>-->
 <!--            <artifactId>hibernate-core</artifactId>-->
 <!--            <version>${yyz.hibernate.version}</version>-->
