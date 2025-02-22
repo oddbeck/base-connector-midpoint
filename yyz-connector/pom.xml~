@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>base-connector</artifactId>
+    <version>0.0.2</version>
+    <packaging>jar</packaging>
+    <parent>
+        <groupId>no.yyz</groupId>
+        <artifactId>parent-project</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>no.yyz</groupId>
+            <artifactId>hibernate-models</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.46.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>7.10.2</version>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.hibernate.orm</groupId>-->
+<!--            <artifactId>hibernate-core</artifactId>-->
+<!--            <version>${yyz.hibernate.version}</version>-->
+<!--            <scope>provided</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.hibernate.orm</groupId>-->
+<!--            <artifactId>hibernate-community-dialects</artifactId>-->
+<!--            <version>${yyz.hibernate.version}</version>-->
+<!--            <scope>provided</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.hibernate.orm</groupId>-->
+<!--            <artifactId>hibernate-core</artifactId>-->
+<!--            <version>${yyz.hibernate.version}</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.hibernate.orm</groupId>-->
+<!--            <artifactId>hibernate-community-dialects</artifactId>-->
+<!--            <version>${yyz.hibernate.version}</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>org.hibernate.common</groupId>-->
+<!--            <artifactId>hibernate-commons-annotations</artifactId>-->
+<!--            <version>7.0.3.Final</version>-->
+<!--            <scope>provided</scope>-->
+<!--        </dependency>-->
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-and-restart-docker</id>
+                        <phase>install</phase>  <!-- Runs after the package phase -->
+                        <configuration>
+                            <target>
+                                <delete>
+                                    <fileset dir="C:\source\midpoint\connectors" includes="*base-connector*.jar"/>
+                                </delete>
+
+                                <!-- Copy the specific JAR file -->
+                                <copy file="${project.build.directory}/base-connector-${project.version}.jar"
+                                      todir="C:\source\midpoint\connectors"
+                                      overwrite="true"/>
+
+                                <!-- Restart Docker container in parent directory -->
+                                <exec executable="cmd">
+                                    <arg line="/c cd /d C:\source\midpoint &amp;&amp; docker compose restart midpoint"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>org/identityconnectors/**</exclude>  <!-- Exclude ConnId -->
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.1.0</version> <!-- Specify the plugin version -->
+                <executions>
+                    <execution>
+                        <phase>clean</phase> <!-- Run clean during the clean phase -->
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
