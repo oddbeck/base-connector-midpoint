@@ -17,6 +17,10 @@ public class HibernateUtilTest {
         try (GroupService service = new GroupService()) {
             var group = service.findGroupByName("amdmins");
             Assert.assertNotNull(group);
+            group.setGroupName("Testings");
+            var gr = service.update(group, group.getId());
+            Assert.assertEquals(gr.getGroupName(), "Testings");
+            Assert.assertEquals(gr.getId(), group.getId());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
