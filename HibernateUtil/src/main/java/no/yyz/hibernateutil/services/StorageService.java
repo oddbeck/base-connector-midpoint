@@ -3,10 +3,11 @@ package no.yyz.hibernateutil.services;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import no.yyz.models.models.BaseModel;
+import org.hibernate.Session;
 
 import java.util.List;
 
-public class StorageService<T extends BaseModel> extends AbstractService  implements AutoCloseable{
+public class StorageService<T extends BaseModel> extends AbstractService implements AutoCloseable {
 
     Class<T> type;
 
@@ -15,12 +16,31 @@ public class StorageService<T extends BaseModel> extends AbstractService  implem
         this.type = type;
     }
 
-    public T persist(T t) {
-        try (var session = sessionFactory.openSession()) {
+    public T persist(T t, Session session) {
+        boolean createdSession = false;
+        try {
+            if (session == null) {
+                session = sessionFactory.openSession();
+                createdSession = true;
+            }
             var transaction = session.getTransaction();
             transaction.begin();
             session.persist(t);
             transaction.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (session != null && createdSession) {
+                session.close();
+            }
+        }
+        return t;
+    }
+
+    public T persist(T t) {
+        try (var session = sessionFactory.openSession()) {
+            persist(t, session);
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
@@ -29,7 +49,23 @@ public class StorageService<T extends BaseModel> extends AbstractService  implem
     }
 
     public T getById(int id) {
-        try (var session = sessionFactory.openSession()) {
+        boolean createdSession = false;
+        try {
+            Session session = sessionFactory.openSession();
+            return getById(id, session);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public T getById(int id, Session session) {
+        boolean createdSession = false;
+        try {
+            if (session == null) {
+                session = sessionFactory.openSession();
+                createdSession = true;
+            }
             var transaction = session.beginTransaction();
             T result = session.get(this.type, id);
             transaction.commit();
@@ -37,6 +73,10 @@ public class StorageService<T extends BaseModel> extends AbstractService  implem
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        } finally {
+            if (session != null && createdSession) {
+                session.close();
+            }
         }
     }
 
@@ -65,6 +105,7 @@ public class StorageService<T extends BaseModel> extends AbstractService  implem
         }
         return t;
     }
+
     public List<T> getAll() {
         try (var session = sessionFactory.openSession()) {
             CriteriaBuilder cb = session.getCriteriaBuilder();

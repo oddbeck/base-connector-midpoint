@@ -5,7 +5,7 @@ import org.hibernate.SessionFactory;
 
 public abstract class AbstractService {
 
-    protected final SessionFactory sessionFactory;
+    public final SessionFactory sessionFactory;
 
     AbstractService() {
         sessionFactory = HibernateUtil.createSessionFactory(

@@ -16,6 +16,7 @@ import org.identityconnectors.framework.spi.PoolableConnector;
 import org.identityconnectors.framework.spi.operations.CreateOp;
 import org.identityconnectors.framework.spi.operations.SchemaOp;
 import org.identityconnectors.framework.spi.operations.SearchOp;
+import org.identityconnectors.framework.spi.operations.UpdateOp;
 
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Set;
 public class YyzConnector implements AutoCloseable, org.identityconnectors.framework.api.operations.TestApiOp,
         PoolableConnector,
         CreateOp,
+        UpdateOp,
         SearchOp<Filter>,
         SchemaOp {
 
@@ -193,5 +195,66 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     @Override
     public void close() throws Exception {
         this.userservice.close();
+    }
+
+    @Override
+    public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> set, OperationOptions operationOptions) {
+        var typename = objectClass.getObjectClassValue();
+        if (typename.equals(ObjectClass.ACCOUNT_NAME)) {
+            var id = uid.getValue().getFirst().toString();
+            try (var session = this.userservice.sessionFactory.openSession()) {
+                User user = this.userservice.getById(Integer.parseInt(id), session);
+
+                for (Attribute attribute : set) {
+                    String name = attribute.getName();
+                    List<Object> value = attribute.getValue();
+                    Object firstValue = null;
+                    if (!value.isEmpty()) {
+                        firstValue = value.getFirst();
+                    }
+                    switch (name.toLowerCase()) {
+                        case "email": {
+                            if (firstValue != null) {
+                                user.setEmail(firstValue.toString());
+                            }
+                            break;
+                        }
+                        case "username": {
+                            if (firstValue != null) {
+                                user.setUsername(firstValue.toString());
+                            }
+                            break;
+                        }
+                        case "givenname": {
+                            if (firstValue != null) {
+                                user.setGivenName(firstValue.toString());
+                            }
+                            break;
+                        }
+                        case "lastname": {
+                            if (firstValue != null) {
+                                user.setLastName(firstValue.toString());
+                            }
+                            break;
+                        }
+                        case "fullname": {
+                            if (firstValue != null) {
+                                user.setFullName(firstValue.toString());
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                user = this.userservice.persist(user, session);
+                return new Uid(String.valueOf(user.getId()));
+            } catch (
+                    Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            return null;
+        }
     }
 }
