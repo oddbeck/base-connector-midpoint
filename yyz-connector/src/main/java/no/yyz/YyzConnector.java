@@ -2,10 +2,12 @@ package no.yyz;
 
 import no.yyz.hibernateutil.services.GroupService;
 import no.yyz.hibernateutil.services.UserService;
+import no.yyz.models.models.User;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
@@ -15,8 +17,8 @@ import org.identityconnectors.framework.spi.operations.CreateOp;
 import org.identityconnectors.framework.spi.operations.SchemaOp;
 import org.identityconnectors.framework.spi.operations.SearchOp;
 
+import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 
@@ -40,6 +42,11 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     public void test() {
         LOG.info("This is a test");
         LOG.warn(("This is a warn"));
+        LOG.error("This is an error");
+        LOG.error("This is an error");
+        LOG.error("This is an error");
+        LOG.error("This is an error");
+        LOG.error("This is an error");
         LOG.error("This is an error");
     }
 
@@ -72,28 +79,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     @Override
     public Schema schema() {
         SchemaBuilder schemaBuilder = new SchemaBuilder(YyzConnector.class);
-        ObjectClassInfoBuilder accountBuilder = new ObjectClassInfoBuilder();
-        accountBuilder.setType(ObjectClass.ACCOUNT_NAME);
-
-        AttributeInfo username = new AttributeInfoBuilder("username", String.class).setRequired(true).build();
-
-        accountBuilder.addAttributeInfo(username);
-
-        accountBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("email", String.class));
-
-        accountBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("givenName", String.class));
-
-        accountBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("lastName", String.class));
-
-        accountBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("fullName", String.class));
-
-
-        schemaBuilder.defineObjectClass(accountBuilder.build());
-
+        schemaBuilder.defineObjectClass(User.ObjectInfoBuilder().build());
         return schemaBuilder.build();
     }
 
@@ -107,8 +93,55 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
             LOG.error("Attribute of type Set<Attribute> not provided.");
             throw new InvalidAttributeValueException("Attribute of type Set<Attribute> not provided.");
         }
-
-        return new Uid(Integer.toString(new Random().nextInt()));
+        User user = new User();
+        for (Attribute attribute : attributes) {
+            String name = attribute.getName();
+            List<Object> value = attribute.getValue();
+            Object firstValue = null;
+            if (!value.isEmpty()) {
+                firstValue = value.getFirst();
+            }
+            switch (name.toLowerCase()) {
+                case "email": {
+                    if (firstValue != null) {
+                        user.setEmail(firstValue.toString());
+                    }
+                    break;
+                }
+                case "username": {
+                    if (firstValue != null) {
+                        user.setUsername(firstValue.toString());
+                    }
+                    break;
+                }
+                case "givenname": {
+                    if (firstValue != null) {
+                        user.setGivenName(firstValue.toString());
+                    }
+                    break;
+                }
+                case "lastname": {
+                    if (firstValue != null) {
+                        user.setLastName(firstValue.toString());
+                    }
+                    break;
+                }
+                case "fullname": {
+                    if (firstValue != null) {
+                        user.setFullName(firstValue.toString());
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        try {
+            user = this.userservice.persist(user);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new Uid(String.valueOf(user.getId()));
     }
 
     @Override
@@ -123,6 +156,38 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
 
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions operationOptions) {
+        try {
+            if (filter instanceof EqualsFilter equalsFilter) {
+                var attributeName = equalsFilter.getAttribute();
+                if (attributeName.getName().equals(Uid.NAME)) {
+                    for (var value : attributeName.getValue()) {
+                        var user = this.userservice.getById(Integer.parseInt(value.toString()));
+                        if (user != null) {
+                            Set<Attribute> attributes = new HashSet<>();
+                            attributes.add(AttributeBuilder.build("username", user.getUsername()));
+                            attributes.add(AttributeBuilder.build("email", user.getEmail()));
+                            attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
+                            attributes.add(AttributeBuilder.build(Name.NAME, user.getEmail()));
+                            ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+                            resultsHandler.handle(obj);
+                        }
+                    }
+                    return;
+                }
+            }
+            List<User> list = this.userservice.getAll();
+            for (User user : list) {
+                Set<Attribute> attributes = new HashSet<>();
+                attributes.add(AttributeBuilder.build("username", user.getUsername()));
+                attributes.add(AttributeBuilder.build("email", user.getEmail()));
+                attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
+                attributes.add(AttributeBuilder.build(Name.NAME, user.getEmail()));
+                ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+                resultsHandler.handle(obj);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
