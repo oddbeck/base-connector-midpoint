@@ -1,5 +1,6 @@
 package no.yyz;
 
+import no.yyz.hibernateutil.services.GroupService;
 import no.yyz.hibernateutil.services.UserService;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
@@ -33,6 +34,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     private static final Log LOG = Log.getLog(YyzConnector.class);
     private YyzConfiguration configuration;
     private final UserService userservice = new UserService();
+    private final GroupService groupService = new GroupService();
 
     @Override
     public void test() {

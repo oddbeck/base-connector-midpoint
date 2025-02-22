@@ -1,5 +1,6 @@
 package no.yyz.hibernateutil;
 
+import no.yyz.models.models.Group;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
@@ -14,7 +15,7 @@ public class HibernateUtil {
     public static SessionFactory createSessionFactory(String jdbcUrl, String driverClassName, String hibernateDialect, String username, String password) {
         Configuration configuration = new Configuration()
                 .addAnnotatedClass(User.class)
-                .addAnnotatedClass(GroupLayout.Group.class)
+                .addAnnotatedClass(Group.class)
                 .addAnnotatedClass(UserGroups.class)
                 .setProperty("hibernate.connection.driver_class", driverClassName)
                 //.setProperty("hibernate.connection.driver_class", "org.sqlite.JDBC")
