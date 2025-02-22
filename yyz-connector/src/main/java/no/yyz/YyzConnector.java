@@ -1,7 +1,9 @@
 package no.yyz;
 
 import no.yyz.hibernateutil.services.GroupService;
+import no.yyz.hibernateutil.services.UserGroupsService;
 import no.yyz.hibernateutil.services.UserService;
+import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
@@ -13,10 +15,7 @@ import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
 import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
 import org.identityconnectors.framework.spi.PoolableConnector;
-import org.identityconnectors.framework.spi.operations.CreateOp;
-import org.identityconnectors.framework.spi.operations.SchemaOp;
-import org.identityconnectors.framework.spi.operations.SearchOp;
-import org.identityconnectors.framework.spi.operations.UpdateOp;
+import org.identityconnectors.framework.spi.operations.*;
 
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +30,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         PoolableConnector,
         CreateOp,
         UpdateOp,
+        DeleteOp,
         SearchOp<Filter>,
         SchemaOp {
 
@@ -39,15 +39,12 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     private YyzConfiguration configuration;
     private final UserService userservice = new UserService();
     private final GroupService groupService = new GroupService();
+    private final UserGroupsService userGroupsService = new UserGroupsService();
 
     @Override
     public void test() {
         LOG.info("This is a test");
         LOG.warn(("This is a warn"));
-        LOG.error("This is an error");
-        LOG.error("This is an error");
-        LOG.error("This is an error");
-        LOG.error("This is an error");
         LOG.error("This is an error");
         LOG.error("This is an error");
     }
@@ -82,6 +79,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     public Schema schema() {
         SchemaBuilder schemaBuilder = new SchemaBuilder(YyzConnector.class);
         schemaBuilder.defineObjectClass(User.ObjectInfoBuilder().build());
+        schemaBuilder.defineObjectClass(Group.ObjectInfoBuilder().build());
         return schemaBuilder.build();
     }
 
@@ -95,49 +93,20 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
             LOG.error("Attribute of type Set<Attribute> not provided.");
             throw new InvalidAttributeValueException("Attribute of type Set<Attribute> not provided.");
         }
-        User user = new User();
-        for (Attribute attribute : attributes) {
-            String name = attribute.getName();
-            List<Object> value = attribute.getValue();
-            Object firstValue = null;
-            if (!value.isEmpty()) {
-                firstValue = value.getFirst();
-            }
-            switch (name.toLowerCase()) {
-                case "email": {
-                    if (firstValue != null) {
-                        user.setEmail(firstValue.toString());
-                    }
-                    break;
-                }
-                case "username": {
-                    if (firstValue != null) {
-                        user.setUsername(firstValue.toString());
-                    }
-                    break;
-                }
-                case "givenname": {
-                    if (firstValue != null) {
-                        user.setGivenName(firstValue.toString());
-                    }
-                    break;
-                }
-                case "lastname": {
-                    if (firstValue != null) {
-                        user.setLastName(firstValue.toString());
-                    }
-                    break;
-                }
-                case "fullname": {
-                    if (firstValue != null) {
-                        user.setFullName(firstValue.toString());
-                    }
-                    break;
-                }
-                default:
-                    break;
+        var typename = objectClass.getObjectClassValue();
+        if (typename.equals(ObjectClass.GROUP_NAME)) {
+            try (var session = this.groupService.sessionFactory.openSession()) {
+                Group group = new Group();
+                group.parseAttributes(attributes);
+                this.groupService.persist(group, session);
+                return new Uid(Integer.toString(group.getId()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
+
+        User user = new User();
+        user.parseAttributes(attributes);
         try {
             user = this.userservice.persist(user);
         } catch (Exception e) {
@@ -145,6 +114,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         }
         return new Uid(String.valueOf(user.getId()));
     }
+
 
     @Override
     public FilterTranslator<Filter> createFilterTranslator(ObjectClass objectClass, OperationOptions operationOptions) {
@@ -159,6 +129,29 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions operationOptions) {
         try {
+            if (objectClass.getObjectClassValue().equals(ObjectClass.GROUP_NAME)) {
+                if (filter instanceof EqualsFilter equalsFilter) {
+                    var attributeName = equalsFilter.getAttribute();
+                    if (attributeName.getName().equals(Uid.NAME)) {
+                        for (var value : attributeName.getValue()) {
+                            var group = this.groupService.getById(Integer.parseInt(value.toString()));
+                            if (group != null) {
+                                Set<Attribute> attributes = processGroupAttributesWithMembers(group);
+                                ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
+                                resultsHandler.handle(obj);
+                            }
+                        }
+                    }
+                } else {
+                    List<Group> list = this.groupService.getAll();
+                    for (Group group : list) {
+                        Set<Attribute> attributes = processGroupAttributesWithMembers(group);
+                        ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
+                        resultsHandler.handle(obj);
+                    }
+                    return;
+                }
+            }
             if (filter instanceof EqualsFilter equalsFilter) {
                 var attributeName = equalsFilter.getAttribute();
                 if (attributeName.getName().equals(Uid.NAME)) {
@@ -169,7 +162,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
                             attributes.add(AttributeBuilder.build("username", user.getUsername()));
                             attributes.add(AttributeBuilder.build("email", user.getEmail()));
                             attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
-                            attributes.add(AttributeBuilder.build(Name.NAME, user.getEmail()));
+                            attributes.add(AttributeBuilder.build(Name.NAME, user.getUsername()));
                             ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
                             resultsHandler.handle(obj);
                         }
@@ -183,13 +176,31 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
                 attributes.add(AttributeBuilder.build("username", user.getUsername()));
                 attributes.add(AttributeBuilder.build("email", user.getEmail()));
                 attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
-                attributes.add(AttributeBuilder.build(Name.NAME, user.getEmail()));
+                attributes.add(AttributeBuilder.build(Name.NAME, user.getUsername()));
                 ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
                 resultsHandler.handle(obj);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Set<Attribute> processGroupAttributesWithMembers(Group group) {
+        Set<Attribute> attributes = new HashSet<>();
+        attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(group.getId())));
+        attributes.add(AttributeBuilder.build(Name.NAME, group.getGroupName()));
+        attributes.add(AttributeBuilder.build("description", group.getDescription()));
+        attributes.add(AttributeBuilder.build("groupName", group.getGroupName()));
+        var membersSearch = this.userGroupsService.sessionFactory.openSession();
+
+        List<Integer> query = membersSearch.createQuery("Select userId from UserGroups where groupId = :groupId", Integer.class)
+                .setParameter("groupId", group.getId())
+                .getResultList();
+        var membersBuilder = new AttributeBuilder();
+        // add new values array with a single value
+        membersBuilder.setName("members");
+        membersBuilder.addValue(query);
+        return attributes;
     }
 
     @Override
@@ -200,61 +211,55 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     @Override
     public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> set, OperationOptions operationOptions) {
         var typename = objectClass.getObjectClassValue();
+        if (typename.equals(ObjectClass.GROUP_NAME)) {
+            try (var session = this.groupService.sessionFactory.openSession()) {
+                var id = uid.getValue().getFirst().toString();
+                Group user = this.groupService.getById(Integer.parseInt(id), session);
+                user.parseAttributes(set);
+                this.groupService.persist(user, session);
+                return uid;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         if (typename.equals(ObjectClass.ACCOUNT_NAME)) {
             var id = uid.getValue().getFirst().toString();
             try (var session = this.userservice.sessionFactory.openSession()) {
                 User user = this.userservice.getById(Integer.parseInt(id), session);
-
-                for (Attribute attribute : set) {
-                    String name = attribute.getName();
-                    List<Object> value = attribute.getValue();
-                    Object firstValue = null;
-                    if (!value.isEmpty()) {
-                        firstValue = value.getFirst();
-                    }
-                    switch (name.toLowerCase()) {
-                        case "email": {
-                            if (firstValue != null) {
-                                user.setEmail(firstValue.toString());
-                            }
-                            break;
-                        }
-                        case "username": {
-                            if (firstValue != null) {
-                                user.setUsername(firstValue.toString());
-                            }
-                            break;
-                        }
-                        case "givenname": {
-                            if (firstValue != null) {
-                                user.setGivenName(firstValue.toString());
-                            }
-                            break;
-                        }
-                        case "lastname": {
-                            if (firstValue != null) {
-                                user.setLastName(firstValue.toString());
-                            }
-                            break;
-                        }
-                        case "fullname": {
-                            if (firstValue != null) {
-                                user.setFullName(firstValue.toString());
-                            }
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-                }
+                user.parseAttributes(set);
                 user = this.userservice.persist(user, session);
                 return new Uid(String.valueOf(user.getId()));
-            } catch (
-                    Exception e) {
+
+            } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         } else {
             return null;
+        }
+    }
+
+    @Override
+    public void delete(ObjectClass objectClass, Uid uid, OperationOptions operationOptions) {
+        var typename = objectClass.getObjectClassValue();
+        if (typename.equals(ObjectClass.GROUP_NAME)) {
+            try (var session = this.groupService.sessionFactory.openSession()) {
+                var id = uid.getValue().getFirst().toString();
+                Group user = this.groupService.getById(Integer.parseInt(id), session);
+                this.groupService.delete(user, session);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (typename.equals(ObjectClass.ACCOUNT_NAME)) {
+            var id = uid.getValue().getFirst().toString();
+            try (var session = this.userservice.sessionFactory.openSession()) {
+                User user = this.userservice.getById(Integer.parseInt(id), session);
+                this.userservice.delete(user, session);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 }

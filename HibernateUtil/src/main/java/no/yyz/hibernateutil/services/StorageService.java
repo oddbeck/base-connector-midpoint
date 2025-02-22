@@ -82,12 +82,29 @@ public class StorageService<T extends BaseModel> extends AbstractService impleme
 
     public void delete(T t) {
         try (var session = sessionFactory.openSession()) {
+            delete(t, session);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+    public void delete(T t, Session session) {
+        boolean createdSession = false;
+        if (session == null) {
+            session = sessionFactory.openSession();
+            createdSession = true;
+        }
+        try {
             var transaction = session.beginTransaction();
             session.remove(t);
             transaction.commit();
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        } finally {
+            if (session != null && createdSession) {
+                session.close();
+            }
         }
     }
 

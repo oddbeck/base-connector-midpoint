@@ -3,6 +3,9 @@ package no.yyz.models.models;
 import jakarta.persistence.*;
 import org.identityconnectors.framework.common.objects.*;
 
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @Table(name = "Users")
 public class User extends BaseModel {
@@ -110,6 +113,51 @@ public class User extends BaseModel {
 //        nameAib.setRequired(true);
 //        objectClassBuilder.addAttributeInfo(nameAib.build());
         return objectClassBuilder;
+    }
+    public void parseAttributes(Set<Attribute> attributes) {
+        User user = new User();
+        for (Attribute attribute : attributes) {
+            String name = attribute.getName();
+            List<Object> value = attribute.getValue();
+            Object firstValue = null;
+            if (!value.isEmpty()) {
+                firstValue = value.getFirst();
+            }
+            switch (name.toLowerCase()) {
+                case "email": {
+                    if (firstValue != null) {
+                        setEmail(firstValue.toString());
+                    }
+                    break;
+                }
+                case "username": {
+                    if (firstValue != null) {
+                        setUsername(firstValue.toString());
+                    }
+                    break;
+                }
+                case "givenname": {
+                    if (firstValue != null) {
+                        setGivenName(firstValue.toString());
+                    }
+                    break;
+                }
+                case "lastname": {
+                    if (firstValue != null) {
+                       setLastName(firstValue.toString());
+                    }
+                    break;
+                }
+                case "fullname": {
+                    if (firstValue != null) {
+                        setFullName(firstValue.toString());
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
     }
 }
 
