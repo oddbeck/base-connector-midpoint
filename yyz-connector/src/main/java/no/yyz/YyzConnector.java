@@ -5,6 +5,10 @@ import no.yyz.hibernateutil.services.UserGroupsService;
 import no.yyz.hibernateutil.services.UserService;
 import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
+import org.hibernate.query.criteria.JpaCriteriaQuery;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
@@ -40,6 +44,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
     private final UserService userservice = new UserService();
     private final GroupService groupService = new GroupService();
     private final UserGroupsService userGroupsService = new UserGroupsService();
+
 
     @Override
     public void test() {
@@ -95,11 +100,21 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         }
         var typename = objectClass.getObjectClassValue();
         if (typename.equals(ObjectClass.GROUP_NAME)) {
+            Group group = new Group();
+            group.parseAttributes(attributes);
             try (var session = this.groupService.sessionFactory.openSession()) {
-                Group group = new Group();
-                group.parseAttributes(attributes);
-                this.groupService.persist(group, session);
-                return new Uid(Integer.toString(group.getId()));
+                var foundGroup = this.groupService.findGroupByName(group.getGroupName(), session);
+                if (foundGroup != null) {
+                    foundGroup.parseAttributes(attributes);
+                    foundGroup = this.groupService.persist(foundGroup);
+                    return new Uid(Integer.toString(foundGroup.getId()));
+                }
+                try {
+                    this.groupService.persist(group, session);
+                    return new Uid(Integer.toString(group.getId()));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -108,7 +123,15 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         User user = new User();
         user.parseAttributes(attributes);
         try {
-            user = this.userservice.persist(user);
+            try (var session = this.userservice.sessionFactory.openSession()) {
+                var foundUser = this.userservice.findByName(user.getUsername(), session);
+                if (foundUser != null) {
+                    foundUser.parseAttributes(attributes);
+                    foundUser = this.userservice.persist(foundUser, session);
+                    return new Uid(Integer.toString(foundUser.getId()));
+                }
+                user = this.userservice.persist(user, session);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -152,38 +175,35 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
                     return;
                 }
             }
-            if (filter instanceof EqualsFilter equalsFilter) {
-                var attributeName = equalsFilter.getAttribute();
-                if (attributeName.getName().equals(Uid.NAME)) {
-                    for (var value : attributeName.getValue()) {
-                        var user = this.userservice.getById(Integer.parseInt(value.toString()));
-                        if (user != null) {
-                            Set<Attribute> attributes = new HashSet<>();
-                            attributes.add(AttributeBuilder.build("username", user.getUsername()));
-                            attributes.add(AttributeBuilder.build("email", user.getEmail()));
-                            attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
-                            attributes.add(AttributeBuilder.build(Name.NAME, user.getUsername()));
-                            ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
-                            resultsHandler.handle(obj);
+            if (objectClass.getObjectClassValue().equals(ObjectClass.ACCOUNT_NAME)) {
+                if (filter instanceof EqualsFilter equalsFilter) {
+                    var attributeName = equalsFilter.getAttribute();
+                    if (attributeName.getName().equals(Uid.NAME)) {
+                        for (var value : attributeName.getValue()) {
+                            var user = this.userservice.getById(Integer.parseInt(value.toString()));
+                            if (user != null) {
+                                Set<Attribute> attributes = user.toAttributes();
+                                ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+                                resultsHandler.handle(obj);
+                            }
                         }
+                        return;
                     }
-                    return;
                 }
-            }
-            List<User> list = this.userservice.getAll();
-            for (User user : list) {
-                Set<Attribute> attributes = new HashSet<>();
-                attributes.add(AttributeBuilder.build("username", user.getUsername()));
-                attributes.add(AttributeBuilder.build("email", user.getEmail()));
-                attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(user.getId())));
-                attributes.add(AttributeBuilder.build(Name.NAME, user.getUsername()));
-                ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
-                resultsHandler.handle(obj);
+                List<User> list = this.userservice.getAll();
+                for (User user : list) {
+                    Set<Attribute> attributes = user.toAttributes();
+                    ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+                    resultsHandler.handle(obj);
+                }
+                return;
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        LOG.warn("Unknown object class: " + objectClass.getObjectClassValue());
     }
+
 
     private Set<Attribute> processGroupAttributesWithMembers(Group group) {
         Set<Attribute> attributes = new HashSet<>();

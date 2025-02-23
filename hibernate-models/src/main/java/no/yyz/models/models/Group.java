@@ -75,6 +75,16 @@ public class Group extends BaseModel {
         return objectClassBuilder;
     }
 
+    public Set<Attribute> toAttributes() {
+        Set<Attribute> attributes = new HashSet<>();
+        attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(id)));
+        attributes.add(AttributeBuilder.build(Name.NAME, groupName));
+        attributes.add(AttributeBuilder.build("description", description));
+        attributes.add(AttributeBuilder.build("groupName", groupName));
+        attributes.add(AttributeBuilder.build("members", members));
+        return attributes;
+    }
+
     public void parseAttributes(Set<Attribute> set) {
         for (Attribute attribute : set) {
             String name = attribute.getName();
@@ -84,6 +94,12 @@ public class Group extends BaseModel {
                 firstValue = value.getFirst();
             }
             switch (name.toLowerCase()) {
+                case "__name__": {
+                    if (firstValue != null) {
+                        setGroupName(firstValue.toString());
+                    }
+                    break;
+                }
                 case "description": {
                     if (firstValue != null) {
                         setDescription(firstValue.toString());

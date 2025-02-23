@@ -3,6 +3,7 @@ package no.yyz.models.models;
 import jakarta.persistence.*;
 import org.identityconnectors.framework.common.objects.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -114,6 +115,17 @@ public class User extends BaseModel {
 //        objectClassBuilder.addAttributeInfo(nameAib.build());
         return objectClassBuilder;
     }
+    public Set<Attribute> toAttributes() {
+        Set<Attribute> attributes = new HashSet<>();
+        attributes.add(AttributeBuilder.build("username", this.getUsername()));
+        attributes.add(AttributeBuilder.build("email", this.getEmail()));
+        attributes.add(AttributeBuilder.build("givenName", this.getGivenName()));
+        attributes.add(AttributeBuilder.build("lastName", this.getLastName()));
+        attributes.add(AttributeBuilder.build("fullName", this.getFullName()));
+        attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(getId())));
+        attributes.add(AttributeBuilder.build(Name.NAME, getUsername()));
+        return attributes;
+    }
     public void parseAttributes(Set<Attribute> attributes) {
         User user = new User();
         for (Attribute attribute : attributes) {
@@ -148,6 +160,8 @@ public class User extends BaseModel {
                     }
                     break;
                 }
+                // treat them the same.
+                case "__name__":
                 case "fullname": {
                     if (firstValue != null) {
                         setFullName(firstValue.toString());
