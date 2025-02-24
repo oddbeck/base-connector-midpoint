@@ -94,22 +94,12 @@ public class Group extends BaseModel {
                 firstValue = value.getFirst();
             }
             switch (name.toLowerCase()) {
-                case "__name__": {
-                    if (firstValue != null) {
-                        setGroupName(firstValue.toString());
-                    }
+                case "__name__", "groupname": {
+                    setGroupName((String) firstValue);
                     break;
                 }
                 case "description": {
-                    if (firstValue != null) {
-                        setDescription(firstValue.toString());
-                    }
-                    break;
-                }
-                case "groupname": {
-                    if (firstValue != null) {
-                        setGroupName(firstValue.toString());
-                    }
+                    setDescription((String) firstValue);
                     break;
                 }
                 case "members": {

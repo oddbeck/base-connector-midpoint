@@ -5,6 +5,9 @@
 
 # dotenv files
 .env
+**/*.class
+**/*.jar
+
 
 # User-specific files
 *.rsuser

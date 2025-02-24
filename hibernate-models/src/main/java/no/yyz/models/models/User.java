@@ -99,22 +99,9 @@ public class User extends BaseModel {
         objectClassBuilder.addAttributeInfo(
                 AttributeInfoBuilder.build("fullName", String.class));
 
-//        AttributeInfoBuilder uidAib = new AttributeInfoBuilder(Uid.NAME);
-//        uidAib.setNativeName("id");
-//        uidAib.setType(Integer.class);
-//        uidAib.setRequired(false); // Must be optional. It is not present for create operations
-//        uidAib.setCreateable(false);
-//        uidAib.setUpdateable(false);
-//        uidAib.setReadable(true);
-//        objectClassBuilder.addAttributeInfo(uidAib.build());
-//
-//        AttributeInfoBuilder nameAib = new AttributeInfoBuilder(Name.NAME);
-//        nameAib.setType(String.class);
-//        nameAib.setNativeName("username");
-//        nameAib.setRequired(true);
-//        objectClassBuilder.addAttributeInfo(nameAib.build());
         return objectClassBuilder;
     }
+
     public Set<Attribute> toAttributes() {
         Set<Attribute> attributes = new HashSet<>();
         attributes.add(AttributeBuilder.build("username", this.getUsername()));
@@ -126,8 +113,8 @@ public class User extends BaseModel {
         attributes.add(AttributeBuilder.build(Name.NAME, getUsername()));
         return attributes;
     }
+
     public void parseAttributes(Set<Attribute> attributes) {
-        User user = new User();
         for (Attribute attribute : attributes) {
             String name = attribute.getName();
             List<Object> value = attribute.getValue();
@@ -137,35 +124,23 @@ public class User extends BaseModel {
             }
             switch (name.toLowerCase()) {
                 case "email": {
-                    if (firstValue != null) {
-                        setEmail(firstValue.toString());
-                    }
+                    setEmail((String) firstValue);
                     break;
                 }
                 case "username": {
-                    if (firstValue != null) {
-                        setUsername(firstValue.toString());
-                    }
+                    setUsername((String) firstValue);
                     break;
                 }
                 case "givenname": {
-                    if (firstValue != null) {
-                        setGivenName(firstValue.toString());
-                    }
+                    setGivenName((String) firstValue);
                     break;
                 }
                 case "lastname": {
-                    if (firstValue != null) {
-                       setLastName(firstValue.toString());
-                    }
+                    setLastName((String) firstValue);
                     break;
                 }
-                // treat them the same.
-                case "__name__":
-                case "fullname": {
-                    if (firstValue != null) {
-                        setFullName(firstValue.toString());
-                    }
+                case "__name__", "fullname": {
+                    setFullName((String) firstValue);
                     break;
                 }
                 default:

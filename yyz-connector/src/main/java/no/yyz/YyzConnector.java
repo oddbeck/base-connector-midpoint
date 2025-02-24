@@ -1,14 +1,12 @@
 package no.yyz;
 
+import jakarta.persistence.criteria.CriteriaDelete;
 import no.yyz.hibernateutil.services.GroupService;
 import no.yyz.hibernateutil.services.UserGroupsService;
 import no.yyz.hibernateutil.services.UserService;
 import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
-import org.hibernate.Session;
-import org.hibernate.query.Query;
-import org.hibernate.query.criteria.HibernateCriteriaBuilder;
-import org.hibernate.query.criteria.JpaCriteriaQuery;
+import no.yyz.models.models.UserGroups;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
@@ -35,6 +33,7 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         CreateOp,
         UpdateOp,
         DeleteOp,
+UpdateAttributeValuesOp,
         SearchOp<Filter>,
         SchemaOp {
 
@@ -234,9 +233,25 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
         if (typename.equals(ObjectClass.GROUP_NAME)) {
             try (var session = this.groupService.sessionFactory.openSession()) {
                 var id = uid.getValue().getFirst().toString();
-                Group user = this.groupService.getById(Integer.parseInt(id), session);
-                user.parseAttributes(set);
-                this.groupService.persist(user, session);
+                Group group = this.groupService.getById(Integer.parseInt(id), session);
+                group.parseAttributes(set);
+                this.groupService.persist(group, session);
+                List<Integer> userIds = this.userGroupsService.getGroupMembersByGroupId(Integer.parseInt(id), session);
+                CriteriaDelete<UserGroups> query = session.getCriteriaBuilder().createCriteriaDelete(UserGroups.class);
+                query.where(
+                        session.getCriteriaBuilder().equal(
+                                query.from(UserGroups.class)
+                                        .get("groupId"), group.getId()
+                        )
+                );
+//                session.createQuery(query).executeUpdate();                session.createNativeQuery("delete from UserGroups where groupId = :groupId", Void.class)
+//                        .setParameter("groupId", group.getId())
+//                        .executeUpdate();
+
+                for (Integer userId : userIds) {
+                    this.userGroupsService.persist(new UserGroups(userId, group.getId()), session);
+                }
+                this.userGroupsService.getAll();
                 return uid;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -281,5 +296,17 @@ public class YyzConnector implements AutoCloseable, org.identityconnectors.frame
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    @Override
+    public Uid addAttributeValues(ObjectClass objectClass, Uid uid, Set<Attribute> set, OperationOptions operationOptions) {
+        update(objectClass, uid, set, operationOptions);
+        return uid;
+    }
+
+    @Override
+    public Uid removeAttributeValues(ObjectClass objectClass, Uid uid, Set<Attribute> set, OperationOptions operationOptions) {
+        update(objectClass, uid, set, operationOptions);
+        return uid;
     }
 }
