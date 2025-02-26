@@ -69,8 +69,9 @@ public class Group extends BaseModel {
         objectClassBuilder.addAttributeInfo(groupName);
         objectClassBuilder.addAttributeInfo(
                 AttributeInfoBuilder.build("description", String.class));
-        var members = new AttributeInfoBuilder("members", String.class);
-        members.setMultiValued(true);
+        AttributeInfoBuilder members = new AttributeInfoBuilder("members", String.class)
+                .setMultiValued(true)
+                ;
         objectClassBuilder.addAttributeInfo(members.build());
         return objectClassBuilder;
     }

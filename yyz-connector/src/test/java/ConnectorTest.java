@@ -39,7 +39,7 @@ public class ConnectorTest {
         attributeSet.add(AttributeBuilder.build("username", "oddb"));
         attributeSet.add(AttributeBuilder.build("fullName", "Odd Beck"));
 
-        ObjectClass oclass = new ObjectClass("User");
+        ObjectClass oclass = new ObjectClass(ObjectClass.ACCOUNT_NAME);
         conn.create(oclass, attributeSet, null);
     }
 }

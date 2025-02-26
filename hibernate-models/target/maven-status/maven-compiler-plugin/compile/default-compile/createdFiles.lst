@@ -1,6 +1,5 @@
 no\yyz\models\models\Group.class
 no\yyz\models\models\User.class
 no\yyz\models\models\UserGroups.class
-no\yyz\createHandler.class
 no\yyz\models\models\BaseModel.class
 no\yyz\models\models\UserGroupsCompoundKey.class

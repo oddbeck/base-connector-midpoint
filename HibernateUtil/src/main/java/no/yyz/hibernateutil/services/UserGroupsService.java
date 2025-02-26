@@ -28,4 +28,21 @@ public class UserGroupsService extends StorageService<UserGroups> implements Aut
             }
         }
     }
+    public List<Integer> getGroupsByUserId(int userId, Session session) {
+        boolean createdSession = false;
+        try {
+            if (session == null) {
+                createdSession = true;
+                session = sessionFactory.openSession();
+            }
+            return session.createQuery("Select groupId from UserGroups where userId = :userId", Integer.class).setParameter("userId", userId).getResultList();
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (session != null && createdSession) {
+                session.close();
+            }
+        }
+    }
 }
