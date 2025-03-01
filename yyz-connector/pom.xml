@@ -5,19 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>base-connector</artifactId>
-    <version>0.0.24</version>
+    <version>${yyz.connector.version}</version>
     <packaging>jar</packaging>
     <parent>
         <groupId>no.yyz</groupId>
         <artifactId>parent-project</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>no.yyz</groupId>
             <artifactId>hibernate-models</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${yyz.connector.version}</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>
@@ -44,26 +44,9 @@
         <dependency>
             <groupId>no.yyz</groupId>
             <artifactId>HibernateUtil</artifactId>
-            <version>0.1.1</version>
+            <version>${yyz.connector.version}</version>
             <scope>compile</scope>
         </dependency>
-        <!--        <dependency>-->
-<!--            <groupId>org.hibernate.orm</groupId>-->
-<!--            <artifactId>hibernate-core</artifactId>-->
-<!--            <version>${yyz.hibernate.version}</version>-->
-<!--            <scope>compile</scope>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.hibernate.orm</groupId>-->
-<!--            <artifactId>hibernate-community-dialects</artifactId>-->
-<!--            <version>${yyz.hibernate.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>org.hibernate.common</groupId>-->
-<!--            <artifactId>hibernate-commons-annotations</artifactId>-->
-<!--            <version>7.0.3.Final</version>-->
-<!--            <scope>provided</scope>-->
-<!--        </dependency>-->
     </dependencies>
 
     <build>

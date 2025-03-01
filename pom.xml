@@ -6,7 +6,7 @@
 
     <groupId>no.yyz</groupId>
     <artifactId>parent-project</artifactId>
-    <version>0.0.2</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>com.evolveum.polygon</groupId>
@@ -19,7 +19,7 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <yyz.hibernate.version>6.5.3.Final</yyz.hibernate.version>
-        <yyz.connector.version>0.0.2</yyz.connector.version>
+        <yyz.connector.version>0.0.26</yyz.connector.version>
     </properties>
 
     <modules>

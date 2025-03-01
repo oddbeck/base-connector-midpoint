@@ -114,6 +114,40 @@ public class User extends BaseModel {
         return attributes;
     }
 
+    public void parseAttributesDelta(Set<AttributeDelta> attributes) {
+        for (AttributeDelta attribute : attributes) {
+            String name = attribute.getName();
+            List<Object> value = attribute.getValuesToReplace();
+            Object firstValue = null;
+            if (!value.isEmpty()) {
+                firstValue = value.getFirst();
+            }
+            switch (name.toLowerCase()) {
+                case "email": {
+                    setEmail((String) firstValue);
+                    break;
+                }
+                case "username": {
+                    setUsername((String) firstValue);
+                    break;
+                }
+                case "givenname": {
+                    setGivenName((String) firstValue);
+                    break;
+                }
+                case "lastname": {
+                    setLastName((String) firstValue);
+                    break;
+                }
+                case "__name__", "fullname": {
+                    setFullName((String) firstValue);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
     public void parseAttributes(Set<Attribute> attributes) {
         for (Attribute attribute : attributes) {
             String name = attribute.getName();

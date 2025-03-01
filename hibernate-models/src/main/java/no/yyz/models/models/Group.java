@@ -70,8 +70,7 @@ public class Group extends BaseModel {
         objectClassBuilder.addAttributeInfo(
                 AttributeInfoBuilder.build("description", String.class));
         AttributeInfoBuilder members = new AttributeInfoBuilder("members", String.class)
-                .setMultiValued(true)
-                ;
+                .setMultiValued(true) ;
         objectClassBuilder.addAttributeInfo(members.build());
         return objectClassBuilder;
     }
@@ -86,6 +85,41 @@ public class Group extends BaseModel {
         return attributes;
     }
 
+    /**
+     * Applies a set of attribute deltas to this object, updating the respective
+     * fields.
+     *
+     * @param set a set of attribute deltas to apply
+     */
+    public void parseAttributesDelta(Set<AttributeDelta> set) {
+        for (AttributeDelta attribute : set) {
+            String name = attribute.getName();
+            List<Object> value = attribute.getValuesToReplace();
+            Object firstValue = null;
+            if (!value.isEmpty()) {
+                firstValue = value.getFirst();
+            }
+            switch (name.toLowerCase()) {
+                case "__name__", "groupname": {
+                    setGroupName((String) firstValue);
+                    break;
+                }
+                case "description": {
+                    setDescription((String) firstValue);
+                    break;
+                }
+                case "members": {
+                    members = new ArrayList<>();
+                    for (var v : value) {
+                        members.add(Integer.parseInt(v.toString()));
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+    }
     public void parseAttributes(Set<Attribute> set) {
         for (Attribute attribute : set) {
             String name = attribute.getName();

@@ -6,11 +6,11 @@
     <parent>
         <groupId>no.yyz</groupId>
         <artifactId>parent-project</artifactId>
-        <version>0.0.2</version>
+        <version>1.0.0</version>
     </parent>
 
     <artifactId>hibernate-models</artifactId>
-    <version>0.1.0</version>
+    <version>${yyz.connector.version}</version>
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
@@ -23,29 +23,11 @@
         <version>${yyz.hibernate.version}</version>
         <scope>provided</scope>
     </dependency>
-    <!--        <dependency>-->
-    <!--            <groupId>org.hibernate.orm</groupId>-->
-    <!--            <artifactId>hibernate-community-dialects</artifactId>-->
-    <!--            <version>${yyz.hibernate.version}</version>-->
-    <!--            <scope>provided</scope>-->
-    <!--        </dependency>-->
-    <!--        <dependency>-->
-    <!--            <groupId>org.hibernate.orm</groupId>-->
-    <!--            <artifactId>hibernate-core</artifactId>-->
-    <!--            <version>${yyz.hibernate.version}</version>-->
-    <!--            <scope>compile</scope>-->
-    <!--        </dependency>-->
     <dependency>
         <groupId>org.hibernate.orm</groupId>
         <artifactId>hibernate-community-dialects</artifactId>
         <version>${yyz.hibernate.version}</version>
     </dependency>
-    <!--        <dependency>-->
-    <!--            <groupId>org.hibernate.common</groupId>-->
-    <!--            <artifactId>hibernate-commons-annotations</artifactId>-->
-    <!--            <version>7.0.3.Final</version>-->
-    <!--            <scope>provided</scope>-->
-    <!--        </dependency>-->
 
 </dependencies>
     <build>
