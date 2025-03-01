@@ -240,10 +240,12 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
                                 break;
                             }
                         }
+                        return;
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
+                return;
             }
         }
         if (filter instanceof EqualsFilter equalsFilter) {
