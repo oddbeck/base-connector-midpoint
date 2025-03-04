@@ -47,13 +47,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Shared dependencies go here (e.g., Hibernate, Spring) -->
-            <!--            <dependency>-->
-            <!--                <groupId>org.hibernate</groupId>-->
-            <!--                <artifactId>hibernate-core</artifactId>-->
-            <!--                <version>5.4.x.Final</version>-->
-            <!--                <scope>provided</scope>-->
-            <!--            </dependency>-->
         </dependencies>
     </dependencyManagement>
 

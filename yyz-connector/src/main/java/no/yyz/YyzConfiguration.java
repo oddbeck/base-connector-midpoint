@@ -1,31 +1,44 @@
 package no.yyz;
 
-import no.yyz.hibernateutil.HibernateUtil;
-import org.hibernate.SessionFactory;
 import org.identityconnectors.framework.spi.AbstractConfiguration;
 import org.identityconnectors.framework.spi.ConfigurationClass;
 import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 @ConfigurationClass(
-        skipUnsupported = true
+    skipUnsupported = true
 )
 public class YyzConfiguration extends AbstractConfiguration {
 
-    private String host;
+  private String jdbcUrl;
+  private String host;
+  @Override
+  public void validate() {
+  }
 
-    @Override
-    public void validate() {
-    }
+  @ConfigurationProperty(
+      required = false ,
+      displayMessageKey = "jdbcUrl",
+      helpMessageKey = "jdbcUrl"
+  )
+  public String getJdbcUrl() {
+    return jdbcUrl;
 
-    @ConfigurationProperty(required = false,
-            helpMessageKey = "UI_CONNECTOR_HOST_HELP",
-            displayMessageKey = "UI_CONNECTOR_HOST_DISPLAY")
-    public String getHost() {
-        return this.host;
-    }
+  }
 
-    public void setHost(String host) {
-        this.host = host;
-    }
+  public void setJdbcUrl(String jdbcUrl) {
+    this.jdbcUrl = jdbcUrl;
+  }
 
+  @ConfigurationProperty(
+      required = false ,
+      displayMessageKey = "get host",
+      helpMessageKey = "get host"
+  )
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
+  }
 }
