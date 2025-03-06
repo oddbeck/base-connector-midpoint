@@ -237,21 +237,15 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
       if (attributeName.getName().equals("members")) {
         try (var session = this.groupService.sessionFactory.openSession()) {
           for (var value : attributeName.getValue()) {
-            List<Integer> groupIds = getGroupIdsFromUserId(value, session);
-            // get all groups from  groupIds the previous query
-            if (groupIds == null || groupIds.isEmpty()) {
-              return;
-            }
-            // find all UsersGroups where userId is present
-            var userGroupMappings = session.createQuery("from UsersGroups where userId = :userId",
-                    UserGroup.class)
-                .setParameter("userId", value).list();
-            if (userGroupMappings == null || userGroupMappings.isEmpty()) {
-              return;
-            }
 
-            for (UserGroup elem : userGroupMappings) {
-              var group = this.groupService.getById(elem.getGroupId());
+            var usersGroupsCriteria = session.getCriteriaBuilder();
+            var query = usersGroupsCriteria.createQuery(UserGroup.class);
+            query.where(usersGroupsCriteria.equal(query.from(UserGroup.class).get("userId"),
+                value));
+            List<UserGroup> userGroups = session.createQuery(query).getResultList();
+
+            for (UserGroup elem : userGroups) {
+              var group = this.groupService.getById(elem.getGroupId(), session);
               Set<Attribute> attributes = group.toAttributes();
               ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
               boolean handlerResult = resultsHandler.handle(obj);
@@ -267,6 +261,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
         }
         return;
       }
+      return;
     }
     if (filter instanceof EqualsFilter equalsFilter) {
       var attributeName = equalsFilter.getAttribute();
@@ -458,7 +453,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
               if (s.getValuesToReplace() != null && !s.getValuesToReplace().isEmpty()) {
                 var transaction = session.beginTransaction();
 
-                var builder  = session.getCriteriaBuilder();
+                var builder = session.getCriteriaBuilder();
                 CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
                 Root<UserGroup> root = delete.from(UserGroup.class);
                 delete.where(builder.equal(root.get("groupId"), Integer.parseInt(groupId)));
