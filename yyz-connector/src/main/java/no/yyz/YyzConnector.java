@@ -333,7 +333,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
         List<Integer> userIds =
             this.userGroupsService.getGroupMembersByGroupId(Integer.parseInt(id), session);
 
-        // delete all elements in table UsersGroups where groupId = id using hibernate query builder
+        // delete all elements in table UserGroup where groupId = id using hibernate query builder
         CriteriaBuilder builder = session.getCriteriaBuilder();
         CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
         Root<UserGroup> root = delete.from(UserGroup.class);
@@ -418,12 +418,12 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
         Group group = this.groupService.getById(Integer.parseInt(groupId), session);
         if (!set.isEmpty()) {
           for (var s : set) {
-            if (s.getName().equals(Name.NAME)) {
+            if (s.getName().equals(Name.NAME) || s.getName().equals("members") || s.getName().equals(Uid.NAME)) {
               if (s.getValuesToAdd() != null && !s.getValuesToAdd().isEmpty()) {
                 for (var v : s.getValuesToAdd()) {
                   // use the criteria builder to find the combination of userid and group in the
                   // UserGroups table
-                  var q = session.createQuery("from UsersGroups where userId = :userId and " +
+                  var q = session.createQuery("from UserGroup where userId = :userId and " +
                       "groupId" +
                       " = :groupId", UserGroup.class);
                   q.setParameter("userId", Integer.parseInt(v.toString()));
@@ -438,7 +438,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
               if (s.getValuesToRemove() != null && !s.getValuesToRemove().isEmpty()) {
                 for (var v : s.getValuesToRemove()) {
                   // check if the combination of userid and group exists in the UserGroups table
-                  var foundCombo = session.createQuery("from UsersGroups where userId = :userId " +
+                  var foundCombo = session.createQuery("from UserGroup where userId = :userId " +
                           "and groupId = :groupId", UserGroup.class)
                       .setParameter("userId", Integer.parseInt(v.toString()))
                       .setParameter("groupId", group.getId()).getResultList();
