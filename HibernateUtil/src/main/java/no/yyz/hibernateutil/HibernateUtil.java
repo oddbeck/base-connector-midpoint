@@ -6,9 +6,7 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.service.ServiceRegistry;
 import no.yyz.models.models.User;
-import no.yyz.models.models.UserGroups;
-
-import javax.swing.*;
+import no.yyz.models.models.UserGroup;
 
 public class HibernateUtil {
 
@@ -16,7 +14,7 @@ public class HibernateUtil {
         Configuration configuration = new Configuration()
                 .addAnnotatedClass(User.class)
                 .addAnnotatedClass(Group.class)
-                .addAnnotatedClass(UserGroups.class)
+                .addAnnotatedClass(UserGroup.class)
                 .setProperty("hibernate.connection.driver_class", driverClassName)
                 //.setProperty("hibernate.connection.driver_class", "org.sqlite.JDBC")
                 .setProperty("hibernate.connection.url", jdbcUrl)

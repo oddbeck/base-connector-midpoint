@@ -9,6 +9,7 @@
 **/*.jar
 
 
+*/target/*
 # User-specific files
 *.rsuser
 *.suo

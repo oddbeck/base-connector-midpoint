@@ -8,7 +8,7 @@ import jakarta.persistence.Table;
 @Entity
 @IdClass(UserGroupsCompoundKey.class)
 @Table(name = "UsersGroups")
-public class UserGroups extends BaseModel {
+public class UserGroup extends BaseModel {
 
     @Id
     public int userId;
@@ -31,10 +31,10 @@ public class UserGroups extends BaseModel {
         this.groupId = groupId;
     }
 
-    public UserGroups() {
+    public UserGroup() {
     }
 
-    public UserGroups(int userId, int groupId) {
+    public UserGroup(int userId, int groupId) {
         this.userId = userId;
         this.groupId = groupId;
     }

@@ -9,7 +9,7 @@ import no.yyz.hibernateutil.services.UserGroupsService;
 import no.yyz.hibernateutil.services.UserService;
 import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
-import no.yyz.models.models.UserGroups;
+import no.yyz.models.models.UserGroup;
 import org.hibernate.Session;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
@@ -59,7 +59,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
   private static List<Integer> getGroupIdsFromUserId(Object value, Session session) {
     CriteriaBuilder allGroupsFromUserid = session.getCriteriaBuilder();
     CriteriaQuery<Integer> groupsQuery = allGroupsFromUserid.createQuery(Integer.class);
-    Root<UserGroups> root = groupsQuery.from(UserGroups.class);
+    Root<UserGroup> root = groupsQuery.from(UserGroup.class);
     groupsQuery.select(root.get("groupId"))
         .where(allGroupsFromUserid.equal(root.get("userId"), Integer.parseInt(value.toString())));
     return session.createQuery(groupsQuery).getResultList();
@@ -186,14 +186,39 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
   private void handleUserQuery(Filter filter, ResultsHandler resultsHandler) {
     if (filter instanceof EqualsFilter equalsFilter) {
       var attributeName = equalsFilter.getAttribute();
-      if (attributeName.getName().equals(Uid.NAME)) {
-        for (var value : attributeName.getValue()) {
-          var user = this.userservice.getById(Integer.parseInt(value.toString()));
-          if (user != null) {
-            Set<Attribute> attributes = user.toAttributes();
-            ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
-            resultsHandler.handle(obj);
+      if (attributeName.getName().equals(Name.NAME)) {
+        try (var session = this.userservice.sessionFactory.openSession()) {
+          for (var value : attributeName.getValue()) {
+            var user =
+                session
+                    .createQuery("from User where username = :username ", User.class).setParameter(
+                        "username", value).getSingleResult();
+            if (user != null) {
+              Set<Attribute> attributes = user.toAttributes();
+              ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+              resultsHandler.handle(obj);
+            }
           }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        return;
+      }
+      if (attributeName.getName().equals(Uid.NAME)) {
+        try (var session = this.userservice.sessionFactory.openSession()) {
+          for (var value : attributeName.getValue()) {
+            var user =
+                session
+                    .createQuery("from User where id = :id ", User.class).setParameter(
+                        "id", value).getSingleResult();
+            if (user != null) {
+              Set<Attribute> attributes = user.toAttributes();
+              ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
+              resultsHandler.handle(obj);
+            }
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
         }
       }
       return;
@@ -218,14 +243,14 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
               return;
             }
             // find all UsersGroups where userId is present
-            var userGroupMappings = session.createQuery("from UserGroups where userId = :userId",
-                    UserGroups.class)
+            var userGroupMappings = session.createQuery("from UsersGroups where userId = :userId",
+                    UserGroup.class)
                 .setParameter("userId", value).list();
             if (userGroupMappings == null || userGroupMappings.isEmpty()) {
               return;
             }
 
-            for (UserGroups elem : userGroupMappings) {
+            for (UserGroup elem : userGroupMappings) {
               var group = this.groupService.getById(elem.getGroupId());
               Set<Attribute> attributes = group.toAttributes();
               ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
@@ -246,13 +271,33 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
     if (filter instanceof EqualsFilter equalsFilter) {
       var attributeName = equalsFilter.getAttribute();
       if (attributeName.getName().equals(Uid.NAME)) {
-        for (var value : attributeName.getValue()) {
-          var group = this.groupService.getById(Integer.parseInt(value.toString()));
-          if (group != null) {
-            Set<Attribute> attributes = processGroupAttributesWithMembers(group);
-            ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
-            resultsHandler.handle(obj);
+        try (var session = this.groupService.sessionFactory.openSession()) {
+          for (var value : attributeName.getValue()) {
+            var group = session.createQuery("from Group where id = :id", Group.class).setParameter(
+                "id",
+                value).getSingleResult();
+            if (group != null) {
+              Set<Attribute> attributes = processGroupAttributesWithMembers(group);
+              ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
+              resultsHandler.handle(obj);
+            }
           }
+        }
+        return;
+      }
+      if (attributeName.getName().equals(Name.NAME)) {
+        try (var session = this.groupService.sessionFactory.openSession()) {
+          for (var value : attributeName.getValue()) {
+            var group = session.createQuery("from Group where id  = :id", Group.class)
+                .setParameter("id", value).getSingleResult();
+            if (group != null) {
+              Set<Attribute> attributes = processGroupAttributesWithMembers(group);
+              ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
+              resultsHandler.handle(obj);
+            }
+          }
+        } catch (Exception e) {
+          throw new RuntimeException(e);
         }
       }
     } else {
@@ -295,13 +340,13 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
 
         // delete all elements in table UsersGroups where groupId = id using hibernate query builder
         CriteriaBuilder builder = session.getCriteriaBuilder();
-        CriteriaDelete<UserGroups> delete = builder.createCriteriaDelete(UserGroups.class);
-        Root<UserGroups> root = delete.from(UserGroups.class);
+        CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
+        Root<UserGroup> root = delete.from(UserGroup.class);
         delete.where(builder.equal(root.get("groupId"), Integer.parseInt(id)));
         session.createMutationQuery(delete).executeUpdate();
 
         for (Integer userId : userIds) {
-          this.userGroupsService.persist(new UserGroups(userId, group.getId()), session);
+          this.userGroupsService.persist(new UserGroup(userId, group.getId()), session);
         }
         this.userGroupsService.getAll();
         return uid;
@@ -374,22 +419,23 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
     var typename = objectClass.getObjectClassValue();
     if (typename.equals(ObjectClass.GROUP_NAME)) {
       try (var session = this.groupService.sessionFactory.openSession()) {
-        var id = uid.getValue().getFirst().toString();
-        Group group = this.groupService.getById(Integer.parseInt(id), session);
+        var groupId = uid.getValue().getFirst().toString();
+        Group group = this.groupService.getById(Integer.parseInt(groupId), session);
         if (!set.isEmpty()) {
           for (var s : set) {
-            if (s.getName().equals("members")) {
+            if (s.getName().equals(Name.NAME)) {
               if (s.getValuesToAdd() != null && !s.getValuesToAdd().isEmpty()) {
                 for (var v : s.getValuesToAdd()) {
                   // use the criteria builder to find the combination of userid and group in the
                   // UserGroups table
-                  var q = session.createQuery("from UserGroups where userId = :userId and groupId" +
-                      " = :groupId", UserGroups.class);
+                  var q = session.createQuery("from UsersGroups where userId = :userId and " +
+                      "groupId" +
+                      " = :groupId", UserGroup.class);
                   q.setParameter("userId", Integer.parseInt(v.toString()));
                   q.setParameter("groupId", group.getId());
-                  List<UserGroups> result = q.getResultList();
+                  List<UserGroup> result = q.getResultList();
                   if (result.isEmpty()) {
-                    this.userGroupsService.persist(new UserGroups(Integer.parseInt(v.toString()),
+                    this.userGroupsService.persist(new UserGroup(Integer.parseInt(v.toString()),
                         group.getId()), session);
                   }
                 }
@@ -397,16 +443,33 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
               if (s.getValuesToRemove() != null && !s.getValuesToRemove().isEmpty()) {
                 for (var v : s.getValuesToRemove()) {
                   // check if the combination of userid and group exists in the UserGroups table
-                  var foundCombo = session.createQuery("from UserGroups where userId = :userId " +
-                          "and groupId = :groupId", UserGroups.class)
+                  var foundCombo = session.createQuery("from UsersGroups where userId = :userId " +
+                          "and groupId = :groupId", UserGroup.class)
                       .setParameter("userId", Integer.parseInt(v.toString()))
                       .setParameter("groupId", group.getId()).getResultList();
                   if (foundCombo.isEmpty()) {
                     continue;
                   }
-                  for (UserGroups userGroups : foundCombo) {
-                    session.remove(userGroups);
+                  for (UserGroup userGroup : foundCombo) {
+                    session.remove(userGroup);
                   }
+                }
+              }
+              if (s.getValuesToReplace() != null && !s.getValuesToReplace().isEmpty()) {
+                var transaction = session.beginTransaction();
+
+                var builder  = session.getCriteriaBuilder();
+                CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
+                Root<UserGroup> root = delete.from(UserGroup.class);
+                delete.where(builder.equal(root.get("groupId"), Integer.parseInt(groupId)));
+                session.createMutationQuery(delete).executeUpdate();
+
+                transaction.commit();
+
+                for (var v : s.getValuesToReplace()) {
+                  // check if the combination of userid and group exists in the UserGroups table
+                  var userGroupCombo = new UserGroup(Integer.parseInt(v.toString()), group.getId());
+                  session.persist(userGroupCombo);
                 }
               }
             }

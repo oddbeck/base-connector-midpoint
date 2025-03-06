@@ -1,14 +1,14 @@
 package no.yyz.hibernateutil.services;
 
 
-import no.yyz.models.models.UserGroups;
+import no.yyz.models.models.UserGroup;
 import org.hibernate.Session;
 
 import java.util.List;
 
-public class UserGroupsService extends StorageService<UserGroups> implements AutoCloseable {
+public class UserGroupsService extends StorageService<UserGroup> implements AutoCloseable {
     public UserGroupsService() {
-        super(UserGroups.class);
+        super(UserGroup.class);
     }
 
     public List<Integer> getGroupMembersByGroupId(int groupId, Session session) {
@@ -18,7 +18,8 @@ public class UserGroupsService extends StorageService<UserGroups> implements Aut
                 createdSession = true;
                 session = sessionFactory.openSession();
             }
-            return session.createQuery("Select userId from UserGroups where groupId = :groupId", Integer.class).setParameter("groupId", groupId).getResultList();
+            return session.createQuery("Select userId from UsersGroups where groupId = :groupId",
+                Integer.class).setParameter("groupId", groupId).getResultList();
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -35,7 +36,8 @@ public class UserGroupsService extends StorageService<UserGroups> implements Aut
                 createdSession = true;
                 session = sessionFactory.openSession();
             }
-            return session.createQuery("Select groupId from UserGroups where userId = :userId", Integer.class).setParameter("userId", userId).getResultList();
+            return session.createQuery("Select groupId from UsersGroups where userId = :userId",
+                Integer.class).setParameter("userId", userId).getResultList();
 
         } catch (Exception e) {
             throw new RuntimeException(e);

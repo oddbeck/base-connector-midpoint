@@ -5,7 +5,7 @@ import no.yyz.hibernateutil.services.UserGroupsService;
 import no.yyz.hibernateutil.services.UserService;
 import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
-import no.yyz.models.models.UserGroups;
+import no.yyz.models.models.UserGroup;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.testng.Assert;
@@ -41,8 +41,8 @@ public class HibernateUtilTest {
                 Group group = new Group("amdmins", "All teh adminz");
                 group = groupService.persist(group);
                 if (user != null && group != null) {
-                    UserGroups userGroups = new UserGroups(user.getId(), group.getId());
-                    var newGroupMapping = service.persist(userGroups);
+                    UserGroup userGroup = new UserGroup(user.getId(), group.getId());
+                    var newGroupMapping = service.persist(userGroup);
                     Assert.assertNotNull(newGroupMapping);
                     Assert.assertEquals(newGroupMapping.getUserId(), user.getId());
                     Assert.assertEquals(newGroupMapping.getGroupId(), group.getId());
