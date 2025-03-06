@@ -1,3 +1,8 @@
+# Enable group auto assignment
+
+For this to work you need to enable group auto assignment.
+This is done under the 'System' -> 'Role management'
+
 # application role
 On application role you must have something similar to this:
 This is basically copied from the docs page from Evolveum
