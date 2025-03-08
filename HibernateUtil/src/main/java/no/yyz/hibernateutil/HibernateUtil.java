@@ -1,9 +1,6 @@
 package no.yyz.hibernateutil;
 
-import no.yyz.models.models.Group;
-import no.yyz.models.models.User;
-import no.yyz.models.models.UserGroup;
-import no.yyz.models.models.UserGroupNames;
+import no.yyz.models.models.*;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;

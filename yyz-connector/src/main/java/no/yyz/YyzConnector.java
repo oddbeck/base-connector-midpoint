@@ -24,6 +24,7 @@ import org.identityconnectors.framework.spi.ConnectorClass;
 import org.identityconnectors.framework.spi.PoolableConnector;
 import org.identityconnectors.framework.spi.operations.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -280,6 +281,24 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
     } else {
       List<Group> list = this.groupService.getAll();
       for (Group group : list) {
+        try (var session = this.groupService.sessionFactory.openSession()) {
+
+          var ugCriteria = session.getCriteriaBuilder();
+          var query = ugCriteria.createQuery(UserGroup.class);
+          query.where(ugCriteria.equal(query.from(UserGroup.class).get("groupId"),
+              group.getId()));
+          List<UserGroup> userGroups = session.createQuery(query).getResultList();
+          if (!userGroups.isEmpty()) {
+            // get the group id from all the userGroups
+            var users = userGroups.stream().map(UserGroup::getUserId).toList();
+            if (!users.isEmpty()) {
+              List<Integer> userIds = users.stream().map(Integer::valueOf).toList();
+              group.setMembers(userIds);
+            }
+          } else {
+            group.setMembers(new ArrayList<>());
+          }
+        }
         Set<Attribute> attributes = processGroupAttributesWithMembers(group);
         ConnectorObject obj = new ConnectorObject(ObjectClass.GROUP, attributes);
         resultsHandler.handle(obj);
@@ -293,6 +312,12 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
     attributes.add(AttributeBuilder.build(Name.NAME, group.getGroupName()));
     attributes.add(AttributeBuilder.build("description", group.getDescription()));
     attributes.add(AttributeBuilder.build("groupName", group.getGroupName()));
+    if (group.getMembers() != null && !group.getMembers().isEmpty()) {
+      List<String> members = group.getMembers().stream().map(String::valueOf).toList();
+      attributes.add(AttributeBuilder.build("members", members));
+    } else {
+      attributes.add(AttributeBuilder.build("members", new ArrayList<>()));
+    }
 
     return attributes;
   }
@@ -437,8 +462,11 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
         q.setParameter("groupId", group.getId());
         List<UserGroup> result = q.getResultList();
         if (result.isEmpty()) {
-          this.userGroupsService.persist(new UserGroup(Integer.parseInt(v.toString()),
-              group.getId()), session);
+          var newUser = new User();
+          newUser.setId(Integer.parseInt(v.toString()));
+          var newGroup = new Group();
+          newGroup.setId(Integer.parseInt(groupId));
+          this.userGroupsService.persist(new UserGroup(newUser.getId(), newGroup.getId()), session);
         }
       }
     }
@@ -453,7 +481,9 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
           continue;
         }
         for (UserGroup userGroup : foundCombo) {
+          var transaction = session.beginTransaction();
           session.remove(userGroup);
+          transaction.commit();
         }
       }
     }
@@ -470,7 +500,9 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
 
       for (var v : s.getValuesToReplace()) {
         // check if the combination of userid and group exists in the UserGroups table
-        var userGroupCombo = new UserGroup(Integer.parseInt(v.toString()), group.getId());
+        var newUser = new User();
+        newUser.setId(Integer.parseInt(v.toString()));
+        var userGroupCombo = new UserGroup(newUser.getId(), group.getId());
         session.persist(userGroupCombo);
       }
     }

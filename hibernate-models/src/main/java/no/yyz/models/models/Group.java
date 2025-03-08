@@ -16,7 +16,7 @@ public class Group extends BaseModel {
     public int id;
     private String groupName;
     private String description;
-    private ArrayList<Integer> members;
+    private List<Integer> members;
 
     // Constructor
     public Group(String groupName, String description) {
@@ -53,11 +53,11 @@ public class Group extends BaseModel {
         this.description = description;
     }
 
-    public ArrayList<Integer> getMembers() {
+    public List<Integer> getMembers() {
         return members;
     }
 
-    public void setMembers(ArrayList<Integer> members) {
+    public void setMembers(List<Integer> members) {
         this.members = members;
     }
 
