@@ -1,7 +1,7 @@
 # Test connector with Midpoint
 
 
-This is just a test connector for me while learning to create connectors with the ICF framework, especially a focus on Evolveum's midPoint
+This is just a test connector for me while learning to create connectors with the OpenICF/ConnID framework, especially a focus on Evolveum's midPoint
 
 This has been tested on 4.8, 4.9, 4.9.1 and even 4.10-SNAPSHOT.
 

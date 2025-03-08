@@ -1,8 +1,6 @@
 package no.yyz;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaDelete;
-import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
 import no.yyz.hibernateutil.services.GroupService;
 import no.yyz.hibernateutil.services.UserGroupsService;
@@ -10,6 +8,7 @@ import no.yyz.hibernateutil.services.UserService;
 import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
 import no.yyz.models.models.UserGroup;
+import no.yyz.models.models.UserGroupNames;
 import org.hibernate.Session;
 import org.identityconnectors.common.CollectionUtil;
 import org.identityconnectors.common.logging.Log;
@@ -38,7 +37,7 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
                                      PoolableConnector,
                                      CreateOp,
                                      DeleteOp,
-                                     UpdateAttributeValuesOp,
+//                                     UpdateAttributeValuesOp,
                                      UpdateDeltaOp,
                                      SearchOp<Filter>,
                                      SchemaOp {
@@ -48,22 +47,6 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
   private final GroupService groupService = new GroupService();
   private final UserGroupsService userGroupsService = new UserGroupsService();
   private YyzConfiguration configuration;
-
-  /**
-   * Return a list of all group IDs that a user with the given ID is a member of.
-   *
-   * @param value   The user ID to look up.
-   * @param session The Hibernate session to use.
-   * @return A list of group IDs that the user is a member of.
-   */
-  private static List<Integer> getGroupIdsFromUserId(Object value, Session session) {
-    CriteriaBuilder allGroupsFromUserid = session.getCriteriaBuilder();
-    CriteriaQuery<Integer> groupsQuery = allGroupsFromUserid.createQuery(Integer.class);
-    Root<UserGroup> root = groupsQuery.from(UserGroup.class);
-    groupsQuery.select(root.get("groupId"))
-        .where(allGroupsFromUserid.equal(root.get("userId"), Integer.parseInt(value.toString())));
-    return session.createQuery(groupsQuery).getResultList();
-  }
 
   @Override
   public void test() {
@@ -189,10 +172,9 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
       if (attributeName.getName().equals(Name.NAME)) {
         try (var session = this.userservice.sessionFactory.openSession()) {
           for (var value : attributeName.getValue()) {
-            var user =
-                session
-                    .createQuery("from User where username = :username ", User.class).setParameter(
-                        "username", value).getSingleResult();
+            var user = session
+                .createQuery("from User where username = :username ", User.class)
+                .setParameter("username", value).getSingleResult();
             if (user != null) {
               Set<Attribute> attributes = user.toAttributes();
               ConnectorObject obj = new ConnectorObject(ObjectClass.ACCOUNT, attributes);
@@ -318,52 +300,8 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
   @Override
   public void close() throws Exception {
     this.userservice.close();
-  }
-
-  @Override
-  public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> set,
-                    OperationOptions operationOptions) {
-    var typename = objectClass.getObjectClassValue();
-    if (typename.equals(ObjectClass.GROUP_NAME)) {
-      try (var session = this.groupService.sessionFactory.openSession()) {
-        var id = uid.getValue().getFirst().toString();
-        Group group = this.groupService.getById(Integer.parseInt(id), session);
-        group.parseAttributes(set);
-        this.groupService.persist(group, session);
-        List<Integer> userIds =
-            this.userGroupsService.getGroupMembersByGroupId(Integer.parseInt(id), session);
-
-        // delete all elements in table UserGroup where groupId = id using hibernate query builder
-        CriteriaBuilder builder = session.getCriteriaBuilder();
-        CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
-        Root<UserGroup> root = delete.from(UserGroup.class);
-        delete.where(builder.equal(root.get("groupId"), Integer.parseInt(id)));
-        session.createMutationQuery(delete).executeUpdate();
-
-        for (Integer userId : userIds) {
-          this.userGroupsService.persist(new UserGroup(userId, group.getId()), session);
-        }
-        this.userGroupsService.getAll();
-        return uid;
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    if (typename.equals(ObjectClass.ACCOUNT_NAME)) {
-      var id = uid.getValue().getFirst().toString();
-      try (var session = this.userservice.sessionFactory.openSession()) {
-        User user = this.userservice.getById(Integer.parseInt(id), session);
-        user.parseAttributes(set);
-        user = this.userservice.persist(user, session);
-        return new Uid(String.valueOf(user.getId()));
-
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    } else {
-      return null;
-    }
+    this.groupService.close();
+    this.userGroupsService.close();
   }
 
   @Override
@@ -394,99 +332,147 @@ public class YyzConnector implements AutoCloseable, TestApiOp,
   }
 
   @Override
-  public Uid addAttributeValues(ObjectClass objectClass, Uid uid, Set<Attribute> set,
-                                OperationOptions operationOptions) {
-    update(objectClass, uid, set, operationOptions);
-    return uid;
-  }
-
-  @Override
-  public Uid removeAttributeValues(ObjectClass objectClass, Uid uid, Set<Attribute> set,
-                                   OperationOptions operationOptions) {
-    update(objectClass, uid, set, operationOptions);
-    return uid;
-  }
-
-  @Override
   public Set<AttributeDelta> updateDelta(ObjectClass objectClass, Uid uid,
                                          Set<AttributeDelta> set,
                                          OperationOptions operationOptions) {
     var typename = objectClass.getObjectClassValue();
     if (typename.equals(ObjectClass.GROUP_NAME)) {
-      try (var session = this.groupService.sessionFactory.openSession()) {
-        var groupId = uid.getValue().getFirst().toString();
-        Group group = this.groupService.getById(Integer.parseInt(groupId), session);
-        if (!set.isEmpty()) {
-          for (var s : set) {
-            if (s.getName().equals(Name.NAME) || s.getName().equals("members") || s.getName().equals(Uid.NAME)) {
-              if (s.getValuesToAdd() != null && !s.getValuesToAdd().isEmpty()) {
-                for (var v : s.getValuesToAdd()) {
-                  // use the criteria builder to find the combination of userid and group in the
-                  // UserGroups table
-                  var q = session.createQuery("from UserGroup where userId = :userId and " +
-                      "groupId" +
-                      " = :groupId", UserGroup.class);
-                  q.setParameter("userId", Integer.parseInt(v.toString()));
-                  q.setParameter("groupId", group.getId());
-                  List<UserGroup> result = q.getResultList();
-                  if (result.isEmpty()) {
-                    this.userGroupsService.persist(new UserGroup(Integer.parseInt(v.toString()),
-                        group.getId()), session);
-                  }
-                }
-              }
-              if (s.getValuesToRemove() != null && !s.getValuesToRemove().isEmpty()) {
-                for (var v : s.getValuesToRemove()) {
-                  // check if the combination of userid and group exists in the UserGroups table
-                  var foundCombo = session.createQuery("from UserGroup where userId = :userId " +
-                          "and groupId = :groupId", UserGroup.class)
-                      .setParameter("userId", Integer.parseInt(v.toString()))
-                      .setParameter("groupId", group.getId()).getResultList();
-                  if (foundCombo.isEmpty()) {
-                    continue;
-                  }
-                  for (UserGroup userGroup : foundCombo) {
-                    session.remove(userGroup);
-                  }
-                }
-              }
-              if (s.getValuesToReplace() != null && !s.getValuesToReplace().isEmpty()) {
-                var transaction = session.beginTransaction();
+      return updateGroupAttributes(uid, set);
 
-                var builder = session.getCriteriaBuilder();
-                CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
-                Root<UserGroup> root = delete.from(UserGroup.class);
-                delete.where(builder.equal(root.get("groupId"), Integer.parseInt(groupId)));
-                session.createMutationQuery(delete).executeUpdate();
-
-                transaction.commit();
-
-                for (var v : s.getValuesToReplace()) {
-                  // check if the combination of userid and group exists in the UserGroups table
-                  var userGroupCombo = new UserGroup(Integer.parseInt(v.toString()), group.getId());
-                  session.persist(userGroupCombo);
-                }
-              }
-            }
-          }
-          return set;
-        }
-        return set;
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
     }
     if (typename.equals(ObjectClass.ACCOUNT_NAME)) {
-      try (var session = this.userservice.sessionFactory.openSession()) {
-        var id = uid.getValue().getFirst().toString();
-        User user = this.userservice.getById(Integer.parseInt(id), session);
-        user.parseAttributesDelta(set);
-        this.userservice.persist(user, session);
-        return set;
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      return updateUserAttributes(uid, set);
     }
     return Set.of();
+  }
+
+  private Set<AttributeDelta> updateUserAttributes(Uid uid, Set<AttributeDelta> set) {
+    try (var session = this.userservice.sessionFactory.openSession()) {
+      var id = uid.getValue().getFirst().toString();
+      User user = this.userservice.getById(Integer.parseInt(id), session);
+      user.parseAttributesDelta(set);
+      this.userservice.persist(user, session);
+      return set;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Set<AttributeDelta> updateGroupAttributes(Uid uid, Set<AttributeDelta> set) {
+    try (var session = this.groupService.sessionFactory.openSession()) {
+      var groupId = uid.getValue().getFirst().toString();
+      if (!set.isEmpty()) {
+        for (var s : set) {
+          if (s.getName().equals("members")) {
+            Group group = this.groupService.getById(Integer.parseInt(groupId), session);
+            handleUidValues(s, session, group, groupId);
+            continue;
+          }
+          if (s.getName().equals(Name.NAME) || s.getName().equals(Uid.NAME)) {
+            handleName(s, session, groupId);
+            continue;
+          }
+          var updateGroup = this.groupService.getById(Integer.parseInt(groupId), session);
+          if (updateGroup != null) {
+            if (s.getName().equals("groupName")) {
+              updateGroup.setGroupName(s.getValuesToReplace().getFirst().toString());
+            }
+            if (s.getName().equals("description")) {
+              updateGroup.setGroupName(s.getValuesToReplace().getFirst().toString());
+            }
+          }
+          this.groupService.persist(updateGroup, session);
+        }
+        return set;
+      }
+      return set;
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private void handleName(AttributeDelta s, Session session, String groupName) {
+    String queryString = "from UserGroupNames where userName = :userName and groupName = " +
+        ":groupName";
+    String userNameColumn = "userName";
+    String groupNameColumn = "groupName";
+    if (s.getValuesToAdd() != null && !s.getValuesToAdd().isEmpty()) {
+      for (var v : s.getValuesToAdd()) {
+        // use the criteria builder to find the combination of userid and group in the
+        // UserGroups table
+        var q = session.createQuery(queryString, UserGroupNames.class);
+        q.setParameter(userNameColumn, v.toString());
+        q.setParameter(groupNameColumn, groupName);
+        List<UserGroupNames> result = q.getResultList();
+        if (result.isEmpty()) {
+          session.persist(new UserGroupNames(v.toString(), groupName));
+        }
+      }
+    }
+    if (s.getValuesToRemove() != null && !s.getValuesToRemove().isEmpty()) {
+      for (var v : s.getValuesToRemove()) {
+        // check if the combination of userid and group exists in the UserGroups table
+        var foundCombo = session.createQuery(queryString, UserGroupNames.class)
+            .setParameter(userNameColumn, v.toString())
+            .setParameter(groupNameColumn, groupName).getResultList();
+        if (foundCombo.isEmpty()) {
+          continue;
+        }
+        for (UserGroupNames userGroup : foundCombo) {
+          session.remove(userGroup);
+        }
+      }
+    }
+  }
+
+  private void handleUidValues(AttributeDelta s, Session session, Group group, String groupId) {
+    if (s.getValuesToAdd() != null && !s.getValuesToAdd().isEmpty()) {
+      for (var v : s.getValuesToAdd()) {
+        // use the criteria builder to find the combination of userid and group in the
+        // UserGroups table
+        var q = session.createQuery("from UserGroup where userId = :userId and " +
+            "groupId" +
+            " = :groupId", UserGroup.class);
+        q.setParameter("userId", Integer.parseInt(v.toString()));
+        q.setParameter("groupId", group.getId());
+        List<UserGroup> result = q.getResultList();
+        if (result.isEmpty()) {
+          this.userGroupsService.persist(new UserGroup(Integer.parseInt(v.toString()),
+              group.getId()), session);
+        }
+      }
+    }
+    if (s.getValuesToRemove() != null && !s.getValuesToRemove().isEmpty()) {
+      for (var v : s.getValuesToRemove()) {
+        // check if the combination of userid and group exists in the UserGroups table
+        var foundCombo = session.createQuery("from UserGroup where userId = :userId " +
+                "and groupId = :groupId", UserGroup.class)
+            .setParameter("userId", Integer.parseInt(v.toString()))
+            .setParameter("groupId", group.getId()).getResultList();
+        if (foundCombo.isEmpty()) {
+          continue;
+        }
+        for (UserGroup userGroup : foundCombo) {
+          session.remove(userGroup);
+        }
+      }
+    }
+    if (s.getValuesToReplace() != null && !s.getValuesToReplace().isEmpty()) {
+      var transaction = session.beginTransaction();
+
+      var builder = session.getCriteriaBuilder();
+      CriteriaDelete<UserGroup> delete = builder.createCriteriaDelete(UserGroup.class);
+      Root<UserGroup> root = delete.from(UserGroup.class);
+      delete.where(builder.equal(root.get("groupId"), Integer.parseInt(groupId)));
+      session.createMutationQuery(delete).executeUpdate();
+
+      transaction.commit();
+
+      for (var v : s.getValuesToReplace()) {
+        // check if the combination of userid and group exists in the UserGroups table
+        var userGroupCombo = new UserGroup(Integer.parseInt(v.toString()), group.getId());
+        session.persist(userGroupCombo);
+      }
+    }
   }
 }
