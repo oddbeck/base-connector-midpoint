@@ -1,5 +1,6 @@
 import no.yyz.YyzConnector;
-import no.yyz.hibernateutil.services.UserService;
+import no.yyz.hibernateutil.services.SessionFactoryService;
+import no.yyz.models.models.Group;
 import no.yyz.models.models.User;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -10,6 +11,9 @@ import org.testng.annotations.Test;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
+
+import static org.testng.AssertJUnit.assertEquals;
+import static org.testng.AssertJUnit.assertTrue;
 
 public class ConnectorTest {
   @Test
@@ -22,11 +26,16 @@ public class ConnectorTest {
   @Test
   public void Fail() throws SQLException, Exception {
 
-    UserService storage = new UserService();
-    User user = storage.persist(new User("odd", "oddbeck@gmail.com"));
-    User newUser = storage.getById(user.getId());
-    Assert.assertEquals(user.getId(), newUser.getId());
-    storage.close();
+    SessionFactoryService service = new SessionFactoryService();
+
+    try (var session = service.sessionFactory.openSession()) {
+      User user = new User("odd", "oddbeck@gmail.com");
+      var tran = session.beginTransaction();
+      session.persist(user);
+      tran.commit();
+      User newUser = session.get(User.class, user.getId());
+      Assert.assertEquals(user.getId(), newUser.getId());
+    }
   }
 
   @Test
@@ -43,18 +52,27 @@ public class ConnectorTest {
     conn.create(oclass, attributeSet, null);
   }
 
-//  @Test
-//  public void UsersAndGroupTest() {
-//    UserGroupsService service = new UserGroupsService();
-//    try (var session = service.sessionFactory.openSession()) {
-//      User user = new User("oddis", "oddis@yyz.no");
-//      Group group = new Group("oddis", "oddis@yyz.no");
-//
-//      session.persist(user);
-//      session.persist(group);
-//
-//      session.persist(new UserGroup(user.getId(), group.getId()));
-//    }
-//
-//  }
+  @Test
+  public void UsersAndGroupTest() {
+    var service = new SessionFactoryService();
+    try (var session = service.sessionFactory.openSession()) {
+      User user = new User("oddis", "oddis@yyz.no");
+      Group group = new Group("oddis", "oddis@yyz.no");
+
+      session.persist(user);
+      session.persist(group);
+//      group.getUsers().add(user);
+      user.getGroups().add(group);
+
+      var tran = session.beginTransaction();
+      session.persist(user);
+      session.persist(group);
+      tran.commit();
+
+      var newUser = session.get(User.class, user.getId());
+      assertEquals(user.getId(), newUser.getId());
+      assertTrue(newUser.getGroups().contains(group));
+    }
+
+  }
 }

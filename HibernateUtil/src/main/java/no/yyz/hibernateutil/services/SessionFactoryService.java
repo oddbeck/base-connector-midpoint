@@ -3,11 +3,11 @@ package no.yyz.hibernateutil.services;
 import no.yyz.hibernateutil.HibernateUtil;
 import org.hibernate.SessionFactory;
 
-public abstract class AbstractService {
+public class SessionFactoryService {
 
     public final SessionFactory sessionFactory;
 
-    AbstractService() {
+    public SessionFactoryService() {
         sessionFactory = HibernateUtil.createSessionFactory(
                 "jdbc:sqlite:test.sqlite",
                 "org.sqlite.JDBC",
@@ -18,7 +18,7 @@ public abstract class AbstractService {
 
     }
 
-    AbstractService(String jdbcUrl, String driverClassName, String hibernateDialect, String username, String password, String name) {
+    SessionFactoryService(String jdbcUrl, String driverClassName, String hibernateDialect, String username, String password, String name) {
         sessionFactory = HibernateUtil.createSessionFactory(jdbcUrl, driverClassName, hibernateDialect, username, password);
     }
 }

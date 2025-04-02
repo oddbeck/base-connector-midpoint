@@ -6,181 +6,204 @@ import org.identityconnectors.framework.common.objects.*;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "Users")
-public class User extends BaseModel {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public int id;
-    private String username;
-    private String email;
-    private String givenName;
-    private String lastName;
+@Table(name = "users")
+public class User { // extends BaseModel {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+  private String username;
+  private String email;
+  private String givenName;
+  private String lastName;
+  private String fullName;
+  @ManyToMany
+  @JoinTable(name = "users_groups", joinColumns = @JoinColumn(name = "user_id"),
+      inverseJoinColumns = @JoinColumn(name = "group_id"))
+  private Set<Group> groups = new HashSet<>();
 
-    public String getFullName() {
-        return fullName;
-    }
+  // Constructor
+  public User(String username, String email) {
+    this.username = username;
+    this.email = email;
+  }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
+  public User() {
+  }
 
-    public String getLastName() {
-        return lastName;
-    }
+  public static ObjectClassInfoBuilder ObjectInfoBuilder() {
 
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
+    ObjectClassInfoBuilder objectClassBuilder = new ObjectClassInfoBuilder();
+    objectClassBuilder.setType(ObjectClass.ACCOUNT_NAME);
 
-    public String getGivenName() {
-        return givenName;
-    }
+    AttributeInfo username =
+        new AttributeInfoBuilder("username", String.class).setRequired(true).build();
 
-    public void setGivenName(String givenName) {
-        this.givenName = givenName;
-    }
+    objectClassBuilder.addAttributeInfo(username);
 
-    private String fullName;
+    objectClassBuilder.addAttributeInfo(
+        AttributeInfoBuilder.build("email", String.class));
 
-    // Constructor
-    public User(String username, String email) {
-        this.username = username;
-        this.email = email;
-    }
+    objectClassBuilder.addAttributeInfo(
+        AttributeInfoBuilder.build("givenName", String.class));
 
-    public User() {
-    }
+    objectClassBuilder.addAttributeInfo(
+        AttributeInfoBuilder.build("lastName", String.class));
 
-    // Getters and setters
-    public int getId() {
-        return id;
-    }
+    objectClassBuilder.addAttributeInfo(
+        AttributeInfoBuilder.build("fullName", String.class));
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    AttributeInfoBuilder members = new AttributeInfoBuilder("memberOf", String.class)
+        .setMultiValued(true);
+    objectClassBuilder.addAttributeInfo(members.build());
 
-    public String getUsername() {
-        return username;
-    }
+    return objectClassBuilder;
+  }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  public Set<Group> getGroups() {
+    return groups;
+  }
 
-    public static ObjectClassInfoBuilder ObjectInfoBuilder() {
+  public void setGroups(Set<Group> groups) {
+    this.groups = groups;
+  }
 
-        ObjectClassInfoBuilder objectClassBuilder = new ObjectClassInfoBuilder();
-        objectClassBuilder.setType(ObjectClass.ACCOUNT_NAME);
+  public String getFullName() {
+    return fullName;
+  }
 
-        AttributeInfo username = new AttributeInfoBuilder("username", String.class).setRequired(true).build();
+  public void setFullName(String fullName) {
+    this.fullName = fullName;
+  }
 
-        objectClassBuilder.addAttributeInfo(username);
+  public String getLastName() {
+    return lastName;
+  }
 
-        objectClassBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("email", String.class));
+  public void setLastName(String lastName) {
+    this.lastName = lastName;
+  }
 
-        objectClassBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("givenName", String.class));
+  public String getGivenName() {
+    return givenName;
+  }
 
-        objectClassBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("lastName", String.class));
+  public void setGivenName(String givenName) {
+    this.givenName = givenName;
+  }
 
-        objectClassBuilder.addAttributeInfo(
-                AttributeInfoBuilder.build("fullName", String.class));
+  // Getters and setters
 
-        return objectClassBuilder;
-    }
+  public String getUsername() {
+    return username;
+  }
 
-    public Set<Attribute> toAttributes() {
-        Set<Attribute> attributes = new HashSet<>();
-        attributes.add(AttributeBuilder.build("username", this.getUsername()));
-        attributes.add(AttributeBuilder.build("email", this.getEmail()));
-        attributes.add(AttributeBuilder.build("givenName", this.getGivenName()));
-        attributes.add(AttributeBuilder.build("lastName", this.getLastName()));
-        attributes.add(AttributeBuilder.build("fullName", this.getFullName()));
-        attributes.add(AttributeBuilder.build(Uid.NAME, Integer.toString(getId())));
-        attributes.add(AttributeBuilder.build(Name.NAME, getUsername()));
-        return attributes;
-    }
+  public void setUsername(String username) {
+    this.username = username;
+  }
 
-    public void parseAttributesDelta(Set<AttributeDelta> attributes) {
-        for (AttributeDelta attribute : attributes) {
-            String name = attribute.getName();
-            List<Object> value = attribute.getValuesToReplace();
-            Object firstValue = null;
-            if (!value.isEmpty()) {
-                firstValue = value.getFirst();
-            }
-            switch (name.toLowerCase()) {
-                case "email": {
-                    setEmail((String) firstValue);
-                    break;
-                }
-                case "username": {
-                    setUsername((String) firstValue);
-                    break;
-                }
-                case "givenname": {
-                    setGivenName((String) firstValue);
-                    break;
-                }
-                case "lastname": {
-                    setLastName((String) firstValue);
-                    break;
-                }
-                case "__name__", "fullname": {
-                    setFullName((String) firstValue);
-                    break;
-                }
-                default:
-                    break;
-            }
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
+  public Set<Attribute> toAttributes() {
+    Set<Attribute> attributes = new HashSet<>();
+    attributes.add(AttributeBuilder.build("username", this.getUsername()));
+    attributes.add(AttributeBuilder.build("email", this.getEmail()));
+    attributes.add(AttributeBuilder.build("givenName", this.getGivenName()));
+    attributes.add(AttributeBuilder.build("lastName", this.getLastName()));
+    attributes.add(AttributeBuilder.build("fullName", this.getFullName()));
+
+    List<String> memberOf = this.getGroups().stream().map(Group::getId).map(String::valueOf).toList();
+    attributes.add(AttributeBuilder.build("memberOf", memberOf));
+
+    attributes.add(AttributeBuilder.build(Uid.NAME, Long.toString(getId())));
+    attributes.add(AttributeBuilder.build(Name.NAME, getUsername()));
+    return attributes;
+  }
+
+  public void parseAttributesDelta(Set<AttributeDelta> attributes) {
+    for (AttributeDelta attribute : attributes) {
+      String name = attribute.getName();
+      List<Object> value = attribute.getValuesToReplace();
+      Object firstValue = null;
+      if (!value.isEmpty()) {
+        firstValue = value.getFirst();
+      }
+      switch (name.toLowerCase()) {
+        case "email": {
+          setEmail((String) firstValue);
+          break;
         }
-    }
-    public void parseAttributes(Set<Attribute> attributes) {
-        for (Attribute attribute : attributes) {
-            String name = attribute.getName();
-            List<Object> value = attribute.getValue();
-            Object firstValue = null;
-            if (!value.isEmpty()) {
-                firstValue = value.getFirst();
-            }
-            switch (name.toLowerCase()) {
-                case "email": {
-                    setEmail((String) firstValue);
-                    break;
-                }
-                case "username": {
-                    setUsername((String) firstValue);
-                    break;
-                }
-                case "givenname": {
-                    setGivenName((String) firstValue);
-                    break;
-                }
-                case "lastname": {
-                    setLastName((String) firstValue);
-                    break;
-                }
-                case "__name__", "fullname": {
-                    setFullName((String) firstValue);
-                    break;
-                }
-                default:
-                    break;
-            }
+        case "username": {
+          setUsername((String) firstValue);
+          break;
         }
+        case "givenname": {
+          setGivenName((String) firstValue);
+          break;
+        }
+        case "lastname": {
+          setLastName((String) firstValue);
+          break;
+        }
+        case "__name__", "fullname": {
+          setFullName((String) firstValue);
+          break;
+        }
+        default:
+          break;
+      }
     }
+  }
+
+  public void parseAttributes(Set<Attribute> attributes) {
+    for (Attribute attribute : attributes) {
+      String name = attribute.getName();
+      List<Object> value = attribute.getValue();
+      Object firstValue = null;
+      if (!value.isEmpty()) {
+        firstValue = value.getFirst();
+      }
+      switch (name.toLowerCase()) {
+        case "email": {
+          setEmail((String) firstValue);
+          break;
+        }
+        case "username": {
+          setUsername((String) firstValue);
+          break;
+        }
+        case "givenname": {
+          setGivenName((String) firstValue);
+          break;
+        }
+        case "lastname": {
+          setLastName((String) firstValue);
+          break;
+        }
+        case "__name__", "fullname": {
+          setFullName((String) firstValue);
+          break;
+        }
+        default:
+          break;
+      }
+    }
+  }
 }
 
